@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-08-28 17:10 v4 lean-assets-local-cities';
+const BUILD = '2026-08-28 18:15 v5 auto-save-backup-nudge';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -187,6 +187,30 @@ function loadSettings() {
 
 function saveSettings(s) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+/* Re-persist quietly on every board creation. The wizard already saves on
+ * finish, so this is belt-and-braces: whatever state produced the picture the
+ * family is looking at is the state that survives to next week. */
+function touchSettings() {
+  try { if (settings) saveSettings(settings); } catch (e) { /* quota — ignore */ }
+}
+
+const NUDGE_KEY = 'memorialBoard.backupHinted';
+
+/* Browser storage is per-device and can be cleared — and for these families
+ * what would be lost is the photo. Offer a backup once, after the first board
+ * actually works, and never nag again. */
+function maybeOfferBackup() {
+  let hinted = true;
+  try { hinted = localStorage.getItem(NUDGE_KEY) === '1'; } catch (e) { /* ignore */ }
+  if (hinted || !settings || !settings.photo) return;
+  $('backupNudge').style.display = 'block';
+}
+
+function dismissNudge() {
+  try { localStorage.setItem(NUDGE_KEY, '1'); } catch (e) { /* ignore */ }
+  $('backupNudge').style.display = 'none';
 }
 
 /* ---------- helpers ---------- */
@@ -819,6 +843,9 @@ async function generate() {
     const kind = plan.mode === 'shabbat' ? 'לשבת' : (plan.mode === 'fast' ? 'לצום' : 'לחג');
     setStatus('הלוח מוכן ' + kind + (plan.name ? ' — ' + plan.name : '') +
       ' (יוצא ב-' + pad(exitD.getDate()) + '.' + pad(exitD.getMonth() + 1) + '.' + exitD.getFullYear() + ')');
+
+    touchSettings();
+    maybeOfferBackup();
   } catch (e) {
     console.error(e);
     if (String(e.message).startsWith('IMAGE_LOAD_FAILED')) {
@@ -887,6 +914,8 @@ function openWizard(prefill) {
   $('screenBoard').style.display = 'none';
   $('wizard').style.display = 'block';
   $('wizCancel').style.display = prefill ? 'inline-block' : 'none';
+  // a backup is only meaningful once there is something to back up
+  $('wizExport').style.display = prefill ? 'inline-block' : 'none';
   $('wizTitle').textContent = prefill ? 'עריכת ההגדרות' : 'יצירת לוח שבת אישי';
   fillWizardFields();
   showStep(0);
@@ -1534,10 +1563,11 @@ $('btnMake').addEventListener('click', generate);
 $('btnDownload').addEventListener('click', download);
 $('btnShare').addEventListener('click', share);
 $('btnSettings').addEventListener('click', () => openWizard(settings));
-$('btnExport').addEventListener('click', exportSettings);
-$('btnImport').addEventListener('click', () => $('importFile').click());
 $('importFile').addEventListener('change', e => importSettings(e.target.files[0]));
 $('wizImport').addEventListener('click', () => $('importFile').click());
+$('wizExport').addEventListener('click', exportSettings);
+$('nudgeSave').addEventListener('click', () => { exportSettings(); dismissNudge(); });
+$('nudgeLater').addEventListener('click', dismissNudge);
 
 $('wizNext').addEventListener('click', wizardNext);
 $('wizPrev').addEventListener('click', () => showStep(Math.max(0, wizardState.step - 1)));

@@ -138,6 +138,23 @@
     padding: 0 16px;
     margin-bottom: 14px;
   }
+  #backupNudge {
+    display: none;
+    width: min(94vw, 560px);
+    background: rgba(255,253,246,.92);
+    border: 1px solid rgba(185,138,68,.5);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin: 4px 12px 18px;
+    font-size: 16px;
+    line-height: 1.65;
+    color: #5a4a22;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(30,45,85,.08);
+  }
+  #backupNudge .nudgebtns {
+    display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap;
+  }
   footer {
     margin-top: auto;
     padding: 10px;
@@ -363,8 +380,6 @@
       <button id="btnShare">📤 שיתוף התמונה</button>
       <button id="btnDownload">⬇ הורדת התמונה</button>
       <button id="btnSettings" class="iconbtn">⚙️ הגדרות</button>
-      <button id="btnExport" class="iconbtn">💾 שמירת הגדרות לקובץ</button>
-      <button id="btnImport" class="iconbtn">📂 טעינת הגדרות</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
 
@@ -374,6 +389,16 @@
       <canvas id="board" width="1254" height="1254"></canvas>
     </div>
     <div id="saveHint">אפשר גם לחיצה ארוכה על התמונה ← "שמירת תמונה"</div>
+
+    <!-- one-time nudge: browser storage can be wiped, and with it the photo -->
+    <div id="backupNudge">
+      <strong>ההגדרות שלכם נשמרו במכשיר הזה אוטומטית.</strong><br>
+      כדי שהלוח יעבוד גם בטלפון אחר — או אם הדפדפן ינוקה — כדאי לשמור גיבוי קטן פעם אחת.
+      <div class="nudgebtns">
+        <button id="nudgeSave" class="iconbtn">💾 שמירת גיבוי</button>
+        <button id="nudgeLater" class="iconbtn">לא עכשיו</button>
+      </div>
+    </div>
   </div>
 
   <!-- ================= wizard ================= -->
@@ -474,6 +499,7 @@
     <div class="wnav">
       <button id="wizPrev" class="iconbtn">→ הקודם</button>
       <span class="spacer"></span>
+      <button id="wizExport" class="iconbtn" style="display:none">💾 שמירת גיבוי</button>
       <button id="wizImport" class="iconbtn">📂 יש לי קובץ הגדרות</button>
       <button id="wizCancel" class="iconbtn" style="display:none">ביטול</button>
       <button id="wizNext">הבא ←</button>
