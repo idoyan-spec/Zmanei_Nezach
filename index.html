@@ -8,6 +8,9 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Bellefair&family=Secular+One&family=Heebo:wght@400;700&family=Amatic+SC:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @font-face {
     font-family: 'FrankRuhl';
@@ -205,14 +208,16 @@
   }
   #photoDrop.has { border-style: solid; }
   #photoPreviewWrap { display: none; text-align: center; margin-top: 12px; }
-  #photoPreview {
-    width: 180px; height: 220px;
-    object-fit: cover;
+  #photoPreviewCanvas {
+    width: 200px; height: 240px;
     border-radius: 12px;
-    border: 3px solid var(--gold);
+    border: 2px solid rgba(185,138,68,.6);
     box-shadow: 0 6px 18px rgba(30,45,85,.25);
+    background: #f3ecdc;
   }
+  #photoPreviewWrap .hint { font-size: 14px; color: #8a7a50; margin-top: 6px; }
   .slider { display: flex; align-items: center; gap: 10px; margin-top: 10px; justify-content: center; }
+  .slider span { min-width: 88px; text-align: left; }
   .slider input[type="range"] { width: 200px; accent-color: var(--gold); }
 
   /* cities */
@@ -233,6 +238,37 @@
   .citygrid label.checked { background: #f3e9d2; border-color: var(--gold); font-weight: 700; }
   .citygrid input { accent-color: var(--gold); width: 18px; height: 18px; }
   #cityCount { text-align: center; color: #6b5a35; margin-top: 10px; font-size: 16px; }
+  .citysearch { display: flex; gap: 8px; margin-top: 6px; }
+  .citysearch input { flex: 1; min-width: 0; }
+  #cityResults { margin-top: 8px; }
+  #cityResults .cres {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: #fffdf6;
+    border: 1px solid rgba(185,138,68,.4);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 16px;
+  }
+  #cityResults .cres button { min-height: 34px; padding: 4px 14px; font-size: 16px; }
+  #cityResults .cnote { font-size: 14px; color: #8a7a50; }
+
+  /* font pairs */
+  .fontgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .fontgrid label {
+    display: block;
+    border: 3px solid transparent;
+    border-radius: 14px;
+    background: #fffdf6;
+    cursor: pointer;
+    padding: 12px 14px 10px;
+    text-align: center;
+  }
+  .fontgrid label.checked { border-color: var(--gold); box-shadow: 0 6px 18px rgba(185,138,68,.35); }
+  .fontgrid input { display: none; }
+  .fontgrid .ft { font-size: 26px; color: var(--navy); line-height: 1.25; }
+  .fontgrid .fb { font-size: 21px; color: #4a5578; margin-top: 2px; }
+  .fontgrid .fname { font-size: 15px; font-weight: 700; color: #6b5a35; margin-top: 8px; }
 
   /* templates */
   .tplgrid {
@@ -329,10 +365,15 @@
       </div>
       <input type="file" id="photoFile" accept="image/*" style="display:none">
       <div id="photoPreviewWrap">
-        <img id="photoPreview" alt="תצוגה מקדימה">
+        <canvas id="photoPreviewCanvas" width="400" height="480"></canvas>
+        <div class="hint">כך התמונה תשתלב בלוח — עם דהייה רכה בשוליים</div>
         <div class="slider">
           <span>מיקום אנכי:</span>
           <input type="range" id="photoOffset" min="0" max="100" value="25">
+        </div>
+        <div class="slider">
+          <span>קרבה (זום):</span>
+          <input type="range" id="photoZoom" min="100" max="200" value="100">
         </div>
       </div>
     </div>
@@ -373,12 +414,27 @@
       <h3>4 · אילו ערים יופיעו בלוח?</h3>
       <div class="citygrid" id="cityGrid"></div>
       <div id="cityCount"></div>
+      <div class="field" style="margin-top:16px">
+        <label for="citySearch">לא מצאתם עיר? חפשו כל עיר בעולם</label>
+        <div class="citysearch">
+          <input type="text" id="citySearch" placeholder="הקלידו שם עיר, למשל: מיאמי">
+          <button id="citySearchBtn" class="iconbtn" type="button">🔍 חיפוש</button>
+        </div>
+        <div id="cityResults"></div>
+        <div class="hint">ערים שנוספו בחיפוש מחושבות לפי מנהג 18 דקות לפני השקיעה</div>
+      </div>
     </div>
 
     <!-- step 5: design -->
     <div class="wstep" data-step="4">
       <h3>5 · בחרו עיצוב</h3>
       <div class="tplgrid" id="tplGrid"></div>
+    </div>
+
+    <!-- step 6: fonts -->
+    <div class="wstep" data-step="5">
+      <h3>6 · סגנון הכתב</h3>
+      <div class="fontgrid" id="fontGrid"></div>
     </div>
 
     <div id="wizErr"></div>
@@ -411,6 +467,21 @@
         <button id="modalClose" class="iconbtn">סגירה</button>
       </div>
     </div>
+  </div>
+
+  <!-- forces every board face to start loading at page load, so the canvas
+       never races the webfonts (a face that isn't loaded silently falls back) -->
+  <div aria-hidden="true" style="position:absolute; left:-9999px; top:-9999px; visibility:hidden">
+    <span style="font-family:'Suez One'">אב12</span>
+    <span style="font-family:'Bellefair'">אב12</span>
+    <span style="font-family:'Secular One'">אב12</span>
+    <span style="font-family:'Heebo'">אב12</span>
+    <span style="font-family:'Amatic SC'">אב12</span>
+    <span style="font-family:'Amatic SC'; font-weight:700">אב12</span>
+    <span style="font-family:'TitleAlt'; font-weight:700">אב12</span>
+    <span style="font-family:'TitleAlt'">אב12</span>
+    <span style="font-family:'BodyAlt'">אב12</span>
+    <span style="font-family:'FrankRuhl'">אב12</span>
   </div>
 
   <footer>

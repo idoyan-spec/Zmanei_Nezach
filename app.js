@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-08-28 12:30 v1 builder-mvp';
+const BUILD = '2026-08-28 14:10 v2 fonts-cities-design';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -28,6 +28,52 @@ const TEMPLATES = {
     ink: '#17203d', gold: '#b98a44', cream: '243,239,229', plaque: '#1f2a4a',
     /* the title zone sits on the dark night sky, so it needs light ink */
     titleInk: '#f2e9c9', titleShadow: 'rgba(10,16,38,0.55)'
+  },
+  field: {
+    label: 'שדה זהב', file: 'templates/field.jpg',
+    ink: '#5a4423', gold: '#a8843c', cream: '246,239,222', plaque: '#5f4d28'
+  },
+  galilee: {
+    label: 'הגליל', file: 'templates/galilee.jpg',
+    ink: '#2e4a3a', gold: '#8f9a55', cream: '244,243,232', plaque: '#3a5244'
+  },
+  tchelet: {
+    label: 'תכלת', file: 'templates/tchelet.jpg',
+    ink: '#28486b', gold: '#8aa3c0', cream: '240,244,248', plaque: '#31517a'
+  }
+};
+
+/* ---------- font pairs ----------
+ * Each pair names a title face and a body face WITH the weight the file
+ * really ships (a synthesised bold reads as a scrawl) and an optical scale —
+ * every face has a different body height at the same px, so sizes calibrated
+ * for the classic pair are multiplied per pair. Google-hosted faces load via
+ * the stylesheet in index.html; TitleAlt/BodyAlt/FrankRuhl are bundled. */
+const FONT_PAIRS = {
+  classic: {
+    label: 'קלאסי', sample: 'דוד ליברה + כתב־יד',
+    title: { stack: '"TitleAlt", FrankRuhl, serif', weight: '700', scale: 1 },
+    body:  { stack: '"BodyAlt", FrankRuhl, serif',  weight: '400', scale: 1 }
+  },
+  festive: {
+    label: 'חגיגי', sample: 'סואץ + פרנק ריהל',
+    title: { stack: '"Suez One", FrankRuhl, serif', weight: '400', scale: 0.8 },
+    body:  { stack: 'FrankRuhl, serif',             weight: '400', scale: 0.82 }
+  },
+  elegant: {
+    label: 'מהודר', sample: 'בלפייר',
+    title: { stack: '"Bellefair", FrankRuhl, serif', weight: '400', scale: 1.02 },
+    body:  { stack: '"Bellefair", FrankRuhl, serif', weight: '400', scale: 0.95 }
+  },
+  modern: {
+    label: 'נקי', sample: 'סקולר + היבו',
+    title: { stack: '"Secular One", FrankRuhl, sans-serif', weight: '400', scale: 0.8 },
+    body:  { stack: '"Heebo", FrankRuhl, sans-serif',       weight: '400', scale: 0.76 }
+  },
+  script: {
+    label: 'כתב יד', sample: 'אמאטיק',
+    title: { stack: '"Amatic SC", FrankRuhl, cursive', weight: '700', scale: 1.18 },
+    body:  { stack: '"Amatic SC", FrankRuhl, cursive', weight: '700', scale: 1.15 }
   }
 };
 
@@ -60,13 +106,19 @@ const VERSES = [
   '__custom__'
 ];
 
-/* Font stacks (same faces as the original Yair board, all OFL). */
-const F_TITLE = '"TitleAlt", FrankRuhl, serif';
-const F_BODY  = '"BodyAlt", FrankRuhl, serif';
-const F_HEAD  = '"TitleAlt", FrankRuhl, serif';
-
+/* Base optical sizes, calibrated for the classic pair; every other pair
+ * multiplies these by its own scale. */
 const S_TITLE = 104, S_SUB = 48, S_HEAD = 52, S_NAME = 38, S_TIME = 42;
-const W_TITLE = '700', W_SUB = '400', W_HEAD = '700', W_NAME = '400', W_TIME = '400';
+
+function fontPair() {
+  return FONT_PAIRS[(settings && settings.fontPair)] || FONT_PAIRS.classic;
+}
+function fTitle() { return fontPair().title.stack; }
+function fBody()  { return fontPair().body.stack; }
+function wTitle() { return fontPair().title.weight; }
+function wBody()  { return fontPair().body.weight; }
+function sT(base) { return Math.round(base * fontPair().title.scale); }
+function sB(base) { return Math.round(base * fontPair().body.scale); }
 
 /* ---------- state ---------- */
 
@@ -91,6 +143,10 @@ function loadSettings() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (!s || !s.name || !s.cities || !s.cities.length || !TEMPLATES[s.template]) return null;
+    // back-compat with v1 settings
+    if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
+    if (!Array.isArray(s.customCities)) s.customCities = [];
+    if (!s.photoZoom) s.photoZoom = 100;
     return s;
   } catch (e) { return null; }
 }
@@ -270,8 +326,8 @@ function drawTitle(title, subtitle) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = T.titleInk || T.ink;
-  const size = fitFont(title, W_TITLE, F_TITLE, S_TITLE, W - 200);
-  ctx.font = W_TITLE + ' ' + size + 'px ' + F_TITLE;
+  const size = fitFont(title, wTitle(), fTitle(), sT(S_TITLE), W - 200);
+  ctx.font = wTitle() + ' ' + size + 'px ' + fTitle();
   ctx.shadowColor = T.titleShadow || 'rgba(0,0,0,0.15)';
   ctx.shadowBlur = 6;
   ctx.shadowOffsetY = 3;
@@ -279,8 +335,9 @@ function drawTitle(title, subtitle) {
   ctx.shadowColor = 'transparent';
 
   if (subtitle) {
-    const sSize = fitFont(subtitle, W_SUB, F_TITLE, S_SUB, W - 500);
-    ctx.font = W_SUB + ' ' + sSize + 'px ' + F_TITLE;
+    /* subtitle stays regular weight — 400 exists in every pair's title face */
+    const sSize = fitFont(subtitle, '400', fTitle(), sT(S_SUB), W - 500);
+    ctx.font = '400 ' + sSize + 'px ' + fTitle();
     ctx.fillText(subtitle, W / 2, 235);
     const w = ctx.measureText(subtitle).width;
     ctx.strokeStyle = T.gold;
@@ -314,8 +371,8 @@ function drawHeaders(rightLabel, leftLabel) {
     lozenge(box);
   });
   [[1020, rightLabel], [240, leftLabel]].forEach(([cx, label]) => {
-    const size = fitFont(label, W_HEAD, F_HEAD, S_HEAD, 350);
-    ctx.font = W_HEAD + ' ' + size + 'px ' + F_HEAD;
+    const size = fitFont(label, wTitle(), fTitle(), sT(S_HEAD), 350);
+    ctx.font = wTitle() + ' ' + size + 'px ' + fTitle();
     ctx.fillStyle = T.ink;
     ctx.shadowColor = 'rgba(0,0,0,0.12)';
     ctx.shadowBlur = 4;
@@ -334,28 +391,24 @@ function drawHeaders(rightLabel, leftLabel) {
   ctx.restore();
 }
 
-/* Feathered photo in the center — cover-fit into a fixed frame, then faded
- * out toward an ellipse edge so it melts into the template paper. */
-function drawPhoto() {
-  if (!photoImage) return;
-  const frame = { x: 297, y: 300, w: 660, h: 790 };
-  const off = document.createElement('canvas');
-  off.width = W; off.height = H;
-  const octx = off.getContext('2d');
-
-  const scale = Math.max(frame.w / photoImage.width, frame.h / photoImage.height);
-  const dw = photoImage.width * scale, dh = photoImage.height * scale;
-  const offY = (settings.photoOffset != null ? settings.photoOffset : 25) / 100;
+/* Feathered photo — cover-fit into a frame with user-controlled zoom and
+ * vertical position, faded out over a wide, gradual ellipse so the figure
+ * melts into the paper instead of sitting in a hard-edged window, then
+ * warmed with a whisper of the paper tone so its colors sit with the art.
+ * Shared by the board (full size) and the wizard's live preview. */
+function paintPhoto(octx, cw, ch, img, frame, offsetPct, zoomPct, creamRGB) {
+  const scale = Math.max(frame.w / img.width, frame.h / img.height) * (zoomPct / 100);
+  const dw = img.width * scale, dh = img.height * scale;
   const sx = frame.x + (frame.w - dw) / 2;
-  const sy = frame.y - (dh - frame.h) * offY;
+  const sy = frame.y - Math.max(0, dh - frame.h) * (offsetPct / 100);
   octx.save();
   octx.beginPath();
   octx.rect(frame.x, frame.y, frame.w, frame.h);
   octx.clip();
-  octx.drawImage(photoImage, sx, sy, dw, dh);
+  octx.drawImage(img, sx, sy, dw, dh);
   octx.restore();
 
-  // ellipse fade mask
+  // wide, gradual ellipse fade — the last third of the radius is all falloff
   const cx = frame.x + frame.w / 2, cy = frame.y + frame.h / 2;
   const rx = frame.w / 2, ry = frame.h / 2;
   octx.globalCompositeOperation = 'destination-in';
@@ -364,8 +417,10 @@ function drawPhoto() {
   octx.scale(1, ry / rx);
   const g = octx.createRadialGradient(0, 0, 0, 0, 0, rx);
   g.addColorStop(0, 'rgba(0,0,0,1)');
-  g.addColorStop(0.62, 'rgba(0,0,0,1)');
-  g.addColorStop(0.88, 'rgba(0,0,0,0.45)');
+  g.addColorStop(0.5, 'rgba(0,0,0,1)');
+  g.addColorStop(0.72, 'rgba(0,0,0,0.85)');
+  g.addColorStop(0.86, 'rgba(0,0,0,0.5)');
+  g.addColorStop(0.95, 'rgba(0,0,0,0.18)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   octx.fillStyle = g;
   octx.beginPath();
@@ -373,6 +428,24 @@ function drawPhoto() {
   octx.fill();
   octx.restore();
 
+  // harmonizing wash: a hint of the paper tone over the remaining pixels
+  octx.globalCompositeOperation = 'source-atop';
+  octx.fillStyle = 'rgba(' + creamRGB + ',0.10)';
+  octx.fillRect(0, 0, cw, ch);
+  octx.globalCompositeOperation = 'source-over';
+}
+
+const PHOTO_FRAME = { x: 297, y: 300, w: 660, h: 790 };
+
+function drawPhoto() {
+  if (!photoImage) return;
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const octx = off.getContext('2d');
+  paintPhoto(octx, W, H, photoImage, PHOTO_FRAME,
+    settings.photoOffset != null ? settings.photoOffset : 25,
+    settings.photoZoom || 100,
+    tpl().cream);
   ctx.drawImage(off, 0, 0);
 }
 
@@ -439,14 +512,14 @@ function drawPlaque() {
   const line2 = [settings.dateLine, settings.verse].filter(Boolean).join('  ·  ');
 
   ctx.fillStyle = '#f2ead8';
-  const s1 = fitFont(line1, '700', F_TITLE, 46, pw - 90);
-  ctx.font = '700 ' + s1 + 'px ' + F_TITLE;
+  const s1 = fitFont(line1, wTitle(), fTitle(), sT(46), pw - 90);
+  ctx.font = wTitle() + ' ' + s1 + 'px ' + fTitle();
   ctx.fillText(line1, W / 2, line2 ? py + 72 : py + 95);
 
   if (line2) {
     ctx.fillStyle = '#dcc389';
-    const s2 = fitFont(line2, '400', F_TITLE, 30, pw - 120);
-    ctx.font = '400 ' + s2 + 'px ' + F_TITLE;
+    const s2 = fitFont(line2, '400', fTitle(), sT(30), pw - 120);
+    ctx.font = '400 ' + s2 + 'px ' + fTitle();
     ctx.fillText(line2, W / 2, py + 122);
     const w2 = ctx.measureText(line2).width;
     ctx.strokeStyle = 'rgba(220,195,137,0.8)';
@@ -568,13 +641,13 @@ function drawRows(rows) {
 
       ctx.direction = 'rtl';
       ctx.textAlign = 'right';
-      const nSize = fitFont(row.name, W_NAME, F_BODY, S_NAME, 190);
-      ctx.font = W_NAME + ' ' + nSize + 'px ' + F_BODY;
+      const nSize = fitFont(row.name, wBody(), fBody(), sB(S_NAME), 190);
+      ctx.font = wBody() + ' ' + nSize + 'px ' + fBody();
       ctx.fillText(row.name, col.nameX, y);
 
       ctx.direction = 'ltr';
       ctx.textAlign = 'left';
-      ctx.font = W_TIME + ' ' + S_TIME + 'px ' + F_BODY;
+      ctx.font = wBody() + ' ' + sB(S_TIME) + 'px ' + fBody();
       ctx.fillText(row[col.key], col.timeX, y);
       ctx.restore();
 
@@ -634,15 +707,21 @@ async function generate() {
     const startISO = isoOf(addDays(chosen, -2));
     const endISO = isoOf(addDays(chosen, 9));
 
-    const cities = CITIES.filter(c => settings.cities.includes(c.key));
+    const cities = allCities(settings).filter(c => settings.cities.includes(c.key));
 
     await Promise.all([
       loadAssets(),
-      document.fonts.load(W_TITLE + ' ' + S_TITLE + 'px ' + F_TITLE).catch(() => {}),
-      document.fonts.load(W_SUB + ' ' + S_SUB + 'px ' + F_TITLE).catch(() => {}),
-      document.fonts.load(W_NAME + ' ' + S_NAME + 'px ' + F_BODY).catch(() => {}),
-      document.fonts.load(W_TIME + ' ' + S_TIME + 'px ' + F_BODY).catch(() => {})
+      document.fonts.ready.catch(() => {}),
+      document.fonts.load(wTitle() + ' ' + sT(S_TITLE) + 'px ' + fTitle()).catch(() => {}),
+      document.fonts.load('400 ' + sT(S_SUB) + 'px ' + fTitle()).catch(() => {}),
+      document.fonts.load(wBody() + ' ' + sB(S_NAME) + 'px ' + fBody()).catch(() => {}),
+      document.fonts.load(wBody() + ' ' + sB(S_TIME) + 'px ' + fBody()).catch(() => {})
     ]);
+    // last-resort settle: if the chosen title face still isn't usable, give
+    // the network one more beat before drawing with a fallback
+    if (!document.fonts.check(wTitle() + ' 20px ' + fTitle())) {
+      await new Promise(r => setTimeout(r, 700));
+    }
 
     const results = await Promise.all(cities.map(c =>
       fetchCityCal(c, startISO, endISO).then(data => ({ city: c, data }))
@@ -708,20 +787,29 @@ function share() {
 /* ---------- wizard ---------- */
 
 const wizardState = { step: 0, draft: null };
-const WSTEPS = 5;
+const WSTEPS = 6;
 
 function defaultDraft() {
   return {
-    v: 1,
+    v: 2,
     photo: '',
     photoOffset: 25,
+    photoZoom: 100,
     dedication: DEDICATIONS[0],
     name: '',
     dateLine: '',
     verse: '',
     cities: ['jerusalem', 'telaviv', 'haifa', 'beersheva'],
-    template: 'classic'
+    customCities: [],
+    template: 'classic',
+    fontPair: 'classic'
   };
+}
+
+/* preset cities + the cities this user added via search */
+function allCities(src) {
+  const custom = (src && src.customCities) || [];
+  return CITIES.concat(custom);
 }
 
 function openWizard(prefill) {
@@ -776,35 +864,14 @@ function fillWizardFields() {
   }
 
   // photo preview
-  if (d.photo) {
-    $('photoPreview').src = d.photo;
-    $('photoPreviewWrap').style.display = 'block';
-    $('photoDrop').classList.add('has');
-  } else {
-    $('photoPreviewWrap').style.display = 'none';
-    $('photoDrop').classList.remove('has');
-  }
   $('photoOffset').value = d.photoOffset != null ? d.photoOffset : 25;
+  $('photoZoom').value = d.photoZoom || 100;
+  refreshPhotoPreview();
 
   // cities
-  const grid = $('cityGrid');
-  grid.innerHTML = '';
-  CITIES.forEach(c => {
-    const label = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = c.key;
-    cb.checked = d.cities.includes(c.key);
-    if (cb.checked) label.classList.add('checked');
-    cb.addEventListener('change', () => {
-      label.classList.toggle('checked', cb.checked);
-      updateCityCount();
-    });
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(c.name));
-    grid.appendChild(label);
-  });
-  updateCityCount();
+  renderCityGrid();
+  $('cityResults').innerHTML = '';
+  $('citySearch').value = '';
 
   // templates
   const tg = $('tplGrid');
@@ -833,6 +900,41 @@ function fillWizardFields() {
     tg.appendChild(label);
   });
 
+  // font pairs
+  const fg = $('fontGrid');
+  fg.innerHTML = '';
+  Object.entries(FONT_PAIRS).forEach(([key, p]) => {
+    const label = document.createElement('label');
+    const rb = document.createElement('input');
+    rb.type = 'radio';
+    rb.name = 'fontPick';
+    rb.value = key;
+    rb.checked = (d.fontPair || 'classic') === key;
+    if (rb.checked) label.classList.add('checked');
+    rb.addEventListener('change', () => {
+      fg.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
+      label.classList.add('checked');
+    });
+    const ft = document.createElement('div');
+    ft.className = 'ft';
+    ft.style.fontFamily = p.title.stack;
+    ft.style.fontWeight = p.title.weight;
+    ft.textContent = 'זמני כניסת ויציאת שבת';
+    const fb = document.createElement('div');
+    fb.className = 'fb';
+    fb.style.fontFamily = p.body.stack;
+    fb.style.fontWeight = p.body.weight;
+    fb.textContent = 'ירושלים · 18:24';
+    const nm = document.createElement('div');
+    nm.className = 'fname';
+    nm.textContent = p.label + ' — ' + p.sample;
+    label.appendChild(rb);
+    label.appendChild(ft);
+    label.appendChild(fb);
+    label.appendChild(nm);
+    fg.appendChild(label);
+  });
+
   // progress dots
   const pr = $('wizProgress');
   pr.innerHTML = '';
@@ -840,6 +942,111 @@ function fillWizardFields() {
     const s = document.createElement('span');
     pr.appendChild(s);
   }
+}
+
+/* live preview of the actual crop + feather, on a neutral paper tone */
+function refreshPhotoPreview() {
+  const d = wizardState.draft;
+  if (!d || !d.photo) {
+    $('photoPreviewWrap').style.display = 'none';
+    $('photoDrop').classList.remove('has');
+    return;
+  }
+  $('photoPreviewWrap').style.display = 'block';
+  $('photoDrop').classList.add('has');
+  const img = new Image();
+  img.onload = () => {
+    const c = $('photoPreviewCanvas');
+    const pctx = c.getContext('2d');
+    pctx.clearRect(0, 0, c.width, c.height);
+    pctx.fillStyle = '#f3ecdc';
+    pctx.fillRect(0, 0, c.width, c.height);
+    paintPhoto(pctx, c.width, c.height, img,
+      { x: 10, y: 10, w: c.width - 20, h: c.height - 20 },
+      Number($('photoOffset').value), Number($('photoZoom').value), '243,236,220');
+  };
+  img.src = d.photo;
+}
+
+function renderCityGrid() {
+  const d = wizardState.draft;
+  const grid = $('cityGrid');
+  grid.innerHTML = '';
+  allCities(d).forEach(c => {
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = c.key;
+    cb.checked = d.cities.includes(c.key);
+    if (cb.checked) label.classList.add('checked');
+    cb.addEventListener('change', () => {
+      label.classList.toggle('checked', cb.checked);
+      updateCityCount();
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(c.name));
+    grid.appendChild(label);
+  });
+  updateCityCount();
+}
+
+/* ---------- city search (Open-Meteo geocoding — free, no key, CORS open) ---------- */
+
+async function searchCity() {
+  const q = $('citySearch').value.trim();
+  const box = $('cityResults');
+  if (!q) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="cnote">מחפש…</div>';
+  try {
+    const url = 'https://geocoding-api.open-meteo.com/v1/search?count=6&language=he&format=json&name=' +
+      encodeURIComponent(q);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const results = (data.results || []).filter(r => r.timezone);
+    if (!results.length) {
+      box.innerHTML = '<div class="cnote">לא נמצאו ערים בשם הזה — נסו איות אחר או שם באנגלית</div>';
+      return;
+    }
+    box.innerHTML = '';
+    results.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'cres';
+      const info = document.createElement('span');
+      info.textContent = r.name + (r.country ? ' · ' + r.country : '') +
+        (r.admin1 && r.admin1 !== r.name ? ' (' + r.admin1 + ')' : '');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'iconbtn';
+      btn.textContent = '+ הוספה';
+      btn.addEventListener('click', () => addCustomCity(r, row));
+      row.appendChild(info);
+      row.appendChild(btn);
+      box.appendChild(row);
+    });
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = '<div class="cnote">שגיאה בחיפוש — בדקו את חיבור האינטרנט ונסו שוב</div>';
+  }
+}
+
+function addCustomCity(r, rowEl) {
+  const d = wizardState.draft;
+  const key = 'g' + r.id;
+  if (!allCities(d).some(c => c.key === key)) {
+    d.customCities.push({
+      key,
+      name: r.name,
+      lat: r.latitude,
+      lng: r.longitude,
+      tzid: r.timezone,
+      candles: 18,
+      israel: r.timezone === 'Asia/Jerusalem'
+    });
+  }
+  if (!d.cities.includes(key)) d.cities.push(key);
+  renderCityGrid();
+  if (rowEl) rowEl.remove();
 }
 
 function updateCityCount() {
@@ -862,6 +1069,7 @@ function collectStep(i) {
   const d = wizardState.draft;
   if (i === 0) {
     d.photoOffset = Number($('photoOffset').value);
+    d.photoZoom = Number($('photoZoom').value);
     // photo itself is set on file pick
   } else if (i === 1) {
     d.dedication = $('fDedication').value;
@@ -876,10 +1084,16 @@ function collectStep(i) {
     if (!picked.length) return 'בחרו לפחות עיר אחת';
     if (picked.length > MAX_CITIES) return 'אפשר לבחור עד ' + MAX_CITIES + ' ערים';
     d.cities = picked;
+    // custom cities that were unchecked are dropped for good
+    d.customCities = d.customCities.filter(c => picked.includes(c.key));
   } else if (i === 4) {
     const rb = document.querySelector('input[name="tplPick"]:checked');
     if (!rb) return 'בחרו אחד מהעיצובים';
     d.template = rb.value;
+  } else if (i === 5) {
+    const rb = document.querySelector('input[name="fontPick"]:checked');
+    if (!rb) return 'בחרו סגנון כתב';
+    d.fontPair = rb.value;
   }
   return '';
 }
@@ -926,9 +1140,7 @@ function handlePhotoFile(file) {
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       const dataURL = c.toDataURL('image/jpeg', 0.85);
       wizardState.draft.photo = dataURL;
-      $('photoPreview').src = dataURL;
-      $('photoPreviewWrap').style.display = 'block';
-      $('photoDrop').classList.add('has');
+      refreshPhotoPreview();
     };
     img.src = reader.result;
   };
@@ -965,8 +1177,15 @@ $('photoDrop').addEventListener('click', () => $('photoFile').click());
 $('photoFile').addEventListener('change', e => handlePhotoFile(e.target.files[0]));
 $('photoOffset').addEventListener('input', () => {
   wizardState.draft.photoOffset = Number($('photoOffset').value);
-  const p = $('photoPreview');
-  p.style.objectPosition = '50% ' + $('photoOffset').value + '%';
+  refreshPhotoPreview();
+});
+$('photoZoom').addEventListener('input', () => {
+  wizardState.draft.photoZoom = Number($('photoZoom').value);
+  refreshPhotoPreview();
+});
+$('citySearchBtn').addEventListener('click', searchCity);
+$('citySearch').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); searchCity(); }
 });
 $('fVerse').addEventListener('change', () => {
   $('fVerseCustomWrap').style.display = $('fVerse').value === '__custom__' ? 'block' : 'none';
@@ -994,6 +1213,7 @@ async function boot() {
       settings.dateLine = 'שנהרג בכ״ה אייר תשס״א';
       settings.verse = 'נר ה׳ נשמת אדם';
       settings.template = urlParams.get('tpl') || 'classic';
+      settings.fontPair = urlParams.get('font') || 'classic';
       settings.cities = ['jerusalem', 'telaviv', 'haifa', 'beersheva', 'ariel', 'katzrin', 'london'];
       saveSettings(settings);
     } catch (e) { console.error('demo seed failed', e); }
