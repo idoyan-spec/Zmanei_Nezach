@@ -1,0 +1,14 @@
+{
+  "name": "לוח שבת לזכרם — לוח זמני שבת אישי",
+  "short_name": "לוח שבת לזכרם",
+  "start_url": ".",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "he",
+  "background_color": "#eee6d2",
+  "theme_color": "#1e2d55",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-256.png", "sizes": "256x256", "type": "image/png" }
+  ]
+}
