@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.*
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- secrets — never commit (managed by session-backup) ---
+.bw-session
+*.session
+.credentials.json
+*credentials*.json
+*.pem
+*.key
+id_rsa*
+*token*
+*.secret
+secrets.*
