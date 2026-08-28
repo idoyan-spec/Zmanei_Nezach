@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>לוח שבת לזכרם</title>
+<title>זמני נצח — לוח שבת לזכרם</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1e2d55">
 <link rel="manifest" href="manifest.json">
@@ -350,8 +350,8 @@
 </head>
 <body>
   <header>
-    <h1 id="appTitle">לוח שבת לזכרם</h1>
-    <div class="memorial" id="memorialLine">לוח זמני שבת אישי — לזכר אהוביכם</div>
+    <h1 id="appTitle">זמני נצח</h1>
+    <div class="memorial" id="memorialLine">לוח זמני שבת אישי — לזכר יקיריכם</div>
   </header>
 
   <!-- ================= board screen ================= -->
@@ -363,6 +363,9 @@
       <button id="btnShare">📤 שיתוף התמונה</button>
       <button id="btnDownload">⬇ הורדת התמונה</button>
       <button id="btnSettings" class="iconbtn">⚙️ הגדרות</button>
+      <button id="btnExport" class="iconbtn">💾 שמירת הגדרות לקובץ</button>
+      <button id="btnImport" class="iconbtn">📂 טעינת הגדרות</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
 
     <div id="status"></div>
@@ -411,7 +414,7 @@
       </div>
       <div class="field">
         <label for="fName">שם יקירכם (כולל תואר אם תרצו)</label>
-        <input type="text" id="fName" placeholder='למשל: סגן יאיר נבנצאל הי״ד'>
+        <input type="text" id="fName" placeholder='למשל: מרים בת אברהם ז״ל'>
       </div>
       <div class="field">
         <label for="fDateLine">שורת התאריך / הנסיבות (לא חובה)</label>
@@ -457,7 +460,7 @@
         <label>גוון הצבע</label>
         <div class="tonegrid" id="toneGrid"></div>
         <div class="hint">כל גוון משנה את כל העיצובים — 12 עיצובים × 4 גוונים × 5 סגנונות כתב, מאות שילובים.
-          רוצים עיצוב נוסף שאינו כאן? כתבו לנו ונוסיף אותו לגלריה.</div>
+          רוצים עיצוב נוסף שאינו כאן? <a href="mailto:idoyan@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%A2%D7%99%D7%A6%D7%95%D7%91%20%D7%97%D7%93%D7%A9">כתבו לנו</a> ונוסיף אותו לגלריה לכולם.</div>
       </div>
     </div>
 
@@ -471,6 +474,7 @@
     <div class="wnav">
       <button id="wizPrev" class="iconbtn">→ הקודם</button>
       <span class="spacer"></span>
+      <button id="wizImport" class="iconbtn">📂 יש לי קובץ הגדרות</button>
       <button id="wizCancel" class="iconbtn" style="display:none">ביטול</button>
       <button id="wizNext">הבא ←</button>
     </div>
@@ -489,9 +493,11 @@
       <p><strong>מנהגי הדלקת נרות:</strong> ירושלים — 40 דקות לפני השקיעה; חיפה — 30 דקות; שאר הערים בארץ ובחו״ל — 18 דקות
         (<a href="https://www.hebcal.com/home/96/what-time-is-candle-lighting" target="_blank" rel="noopener">הסבר בהרחבה</a>).
         ליישוב שנוסף בחיפוש אפשר <strong>לבחור את מספר הדקות בעצמכם</strong> לפי מנהג המקום, והמספר הנבחר מוצג לצד שם היישוב ברשימה.</p>
-      <p><strong>איתור יישובים:</strong> שמות וקואורדינטות מגיעים מ-<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
-        ולישובים קטנים מ-<a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> — מפת העולם השיתופית הפתוחה.
-        כדאי לוודא שהיישוב שנבחר הוא אכן שלכם (יש שמות כפולים).</p>
+      <p><strong>איתור יישובים:</strong> רשימת 1,174 היישובים בישראל מוטמעת בכלי עצמו (מקור: נתוני יישובים פתוחים של מערך הדיגיטל הלאומי / data.gov.il),
+        ולכן החיפוש בארץ מיידי ואינו תלוי בשירות חיצוני. לערים בחו״ל ולשמות עממיים משמשים
+        <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ו-<a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>.
+        יש יישובים הרשומים בשמם הרשמי (למשל <strong>נווה צוף</strong> רשום כ<strong>חלמיש</strong>) — אם לא מצאתם, נסו את השם השני.
+        כדאי לוודא שהיישוב שנבחר הוא אכן שלכם.</p>
       <p><strong>צאת שבת וחג:</strong> לפי צאת הכוכבים (הופעת שלושה כוכבים בינוניים) בחישוב האסטרונומי של Hebcal.</p>
       <p style="background:#f3e9d2; border-radius:10px; padding:10px 14px;">
         ⚠️ הזמנים כאן הם עזר בלבד. הלכה למעשה מומלץ לאמת מול לוח הרבנות המקומית או לוח בית הכנסת שלכם —
@@ -521,6 +527,8 @@
   <footer>
     <span id="buildStamp"></span><br>
     <a href="#" id="srcLink">ℹ️ מקורות הזמנים</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:idoyan@gmail.com?subject=%D7%96%D7%9E%D7%A0%D7%99%20%D7%A0%D7%A6%D7%97%20%E2%80%94%20%D7%A4%D7%A0%D7%99%D7%99%D7%94">✉️ פנייה / בקשת עיצוב</a>
   </footer>
   <script src="app.js"></script>
 </body>

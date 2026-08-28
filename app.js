@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-08-28 15:25 v3 city-search-osm';
+const BUILD = '2026-08-28 17:10 v4 lean-assets-local-cities';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -12,55 +12,55 @@ const SETTINGS_KEY = 'memorialBoard.v1';
  * lozenges fade toward, so it must match the template's paper. */
 const TEMPLATES = {
   classic: {
-    label: 'קלאסי', file: 'templates/classic.jpg',
+    label: 'קלאסי', file: 'templates/classic.webp',
     ink: '#1e2d55', gold: '#b98a44', cream: '246,240,226', plaque: '#2f425a'
   },
   olive: {
-    label: 'ענף זית', file: 'templates/olive.jpg',
+    label: 'ענף זית', file: 'templates/olive.webp',
     ink: '#2f4a33', gold: '#a08b3f', cream: '247,243,232', plaque: '#3c523f'
   },
   jerusalem: {
-    label: 'ירושלים', file: 'templates/jerusalem.jpg',
+    label: 'ירושלים', file: 'templates/jerusalem.webp',
     ink: '#5a4326', gold: '#b08d4f', cream: '245,237,221', plaque: '#5a4326'
   },
   night: {
-    label: 'שמי לילה', file: 'templates/night.jpg',
+    label: 'שמי לילה', file: 'templates/night.webp',
     ink: '#17203d', gold: '#b98a44', cream: '243,239,229', plaque: '#1f2a4a',
     /* the title zone sits on the dark night sky, so it needs light ink */
     titleInk: '#f2e9c9', titleShadow: 'rgba(10,16,38,0.55)'
   },
   field: {
-    label: 'שדה זהב', file: 'templates/field.jpg',
+    label: 'שדה זהב', file: 'templates/field.webp',
     ink: '#5a4423', gold: '#a8843c', cream: '246,239,222', plaque: '#5f4d28'
   },
   galilee: {
-    label: 'הגליל', file: 'templates/galilee.jpg',
+    label: 'הגליל', file: 'templates/galilee.webp',
     ink: '#2e4a3a', gold: '#8f9a55', cream: '244,243,232', plaque: '#3a5244'
   },
   tchelet: {
-    label: 'תכלת', file: 'templates/tchelet.jpg',
+    label: 'תכלת', file: 'templates/tchelet.webp',
     ink: '#28486b', gold: '#8aa3c0', cream: '240,244,248', plaque: '#31517a'
   },
   /* --- Shabbat-themed --- */
   candles: {
-    label: 'נרות שבת', file: 'templates/candles.jpg', shabbat: true,
+    label: 'נרות שבת', file: 'templates/candles.webp', shabbat: true,
     ink: '#4a3b25', gold: '#b08d4f', cream: '250,245,230', plaque: '#4a3f2a'
   },
   challah: {
-    label: 'חלות וקידוש', file: 'templates/challah.jpg', shabbat: true,
+    label: 'חלות וקידוש', file: 'templates/challah.webp', shabbat: true,
     ink: '#5a2a33', gold: '#a8853f', cream: '250,247,238', plaque: '#5e2f38'
   },
   'shabbat-table': {
-    label: 'שולחן שבת', file: 'templates/shabbat-table.jpg', shabbat: true,
+    label: 'שולחן שבת', file: 'templates/shabbat-table.webp', shabbat: true,
     ink: '#3a3f4a', gold: '#a3947a', cream: '248,248,246', plaque: '#474d59'
   },
   havdala: {
-    label: 'הבדלה', file: 'templates/havdala.jpg', shabbat: true,
+    label: 'הבדלה', file: 'templates/havdala.webp', shabbat: true,
     ink: '#3a3550', gold: '#9a8fa8', cream: '245,242,234', plaque: '#3f3a5c',
     titleInk: '#f2eee4', titleShadow: 'rgba(30,24,55,0.5)'
   },
   pomegranate: {
-    label: 'רימונים', file: 'templates/pomegranate.jpg', shabbat: true,
+    label: 'רימונים', file: 'templates/pomegranate.webp', shabbat: true,
     ink: '#5c232c', gold: '#b08d3f', cream: '249,246,236', plaque: '#5c232c'
   }
 };
@@ -125,9 +125,6 @@ const CITIES = [
   { key: 'modiin',    name: 'מודיעין',   lat: 31.8928, lng: 35.0153,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'ariel',     name: 'שומרון',    lat: 32.1046, lng: 35.1745,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'katzrin',   name: 'רמת הגולן', lat: 32.9925, lng: 35.6899,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
-  /* on the original board and absent from every public gazetteer, so it
-   * cannot be recovered by search — it has to ship as a preset */
-  { key: 'neveyair',  name: 'נווה יאיר', lat: 31.3600, lng: 34.4200,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'london',    name: 'לונדון',    lat: 51.5074, lng: -0.1278,  tzid: 'Europe/London',       candles: 18, israel: false },
   { key: 'newyork',   name: 'ניו יורק',  lat: 40.7128, lng: -74.0060, tzid: 'America/New_York',    candles: 18, israel: false },
   { key: 'paris',     name: 'פריז',      lat: 48.8566, lng: 2.3522,   tzid: 'Europe/Paris',        candles: 18, israel: false },
@@ -718,6 +715,23 @@ function tonedBg() {
   return c;
 }
 
+const CONTACT_EMAIL = 'idoyan@gmail.com';
+
+/* Discreet credit in the bottom-left corner, outside the plaque, so anyone
+ * who receives the image forwarded in a WhatsApp group can find the tool. */
+function drawContact() {
+  ctx.save();
+  ctx.direction = 'ltr';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '400 19px FrankRuhl, serif';
+  ctx.fillStyle = 'rgba(0,0,0,0.34)';
+  ctx.shadowColor = 'rgba(255,255,255,0.6)';
+  ctx.shadowBlur = 4;
+  ctx.fillText(CONTACT_EMAIL, 42, 1228);
+  ctx.restore();
+}
+
 function drawBoard(plan, rows) {
   const labels = LABELS[plan.mode];
   ctx.clearRect(0, 0, W, H);
@@ -727,6 +741,7 @@ function drawBoard(plan, rows) {
   drawHeaders(labels.right, labels.left);
   drawPlaque();
   drawRows(rows);
+  drawContact();
 }
 
 /* ---------- assets ---------- */
@@ -956,7 +971,11 @@ function fillWizardFields() {
       label.classList.add('checked');
     });
     const img = document.createElement('img');
-    img.src = t.file;
+    // 320px thumbnail, not the full 1254px art — the gallery shows twelve of
+    // these at once, and the full file is fetched only for the chosen one
+    img.src = t.file.replace('templates/', 'templates/thumb/');
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.alt = t.label;
     const nm = document.createElement('div');
     nm.className = 'tname';
@@ -1127,6 +1146,58 @@ function autoCandles(lat, lng) {
 
 const CANDLE_CHOICES = [15, 18, 20, 22, 25, 30, 40];
 
+/* ---------- bundled Israeli localities ----------
+ * 1,174 localities with Hebrew names and WGS84 coordinates, shipped with the
+ * site (~21 KB gzipped). Searching these locally means the common case needs
+ * no network at all, and it keeps us far away from Nominatim's rate policy —
+ * its 1 req/sec cap counts per application, not per user. */
+
+let ilCities = null, ilLoading = null;
+
+function loadIsraeliCities() {
+  if (ilCities) return Promise.resolve(ilCities);
+  if (!ilLoading) {
+    ilLoading = fetch('cities-il.json')
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { ilCities = d; return d; })
+      .catch(() => { ilCities = []; return []; });
+  }
+  return ilLoading;
+}
+
+/* Hebrew place names are written both plene and defective — נווה/נוה,
+ * קריית/קרית — and users type either. Collapsing the doubled letters and
+ * the punctuation makes both spellings compare equal. */
+function normHe(s) {
+  return (s || '')
+    .replace(/[֑-ׇ]/g, '')      // nikud / cantillation
+    .replace(/["'`׳״]/g, '')
+    .replace(/וו/g, 'ו')
+    .replace(/יי/g, 'י')
+    .replace(/[\s\-־]/g, '');
+}
+
+async function searchIsraeliCities(q) {
+  const list = await loadIsraeliCities();
+  const n = normHe(q);
+  if (!n) return [];
+  const starts = [], contains = [];
+  for (const c of list) {
+    const h = normHe(c.h);
+    if (h === n || h.startsWith(n)) starts.push(c);
+    else if (h.includes(n)) contains.push(c);
+    if (starts.length >= 8) break;
+  }
+  return starts.concat(contains).slice(0, 8).map(c => ({
+    key: 'il' + c.h,
+    name: c.h,
+    region: 'ישראל',
+    lat: c.y,
+    lng: c.x,
+    tzid: 'Asia/Jerusalem'
+  }));
+}
+
 async function fetchOpenMeteo(q) {
   const url = 'https://geocoding-api.open-meteo.com/v1/search?count=6&language=he&format=json&name=' +
     encodeURIComponent(q);
@@ -1192,12 +1263,17 @@ async function searchCity() {
   const mySeq = ++searchSeq;
   box.innerHTML = '<div class="cnote">מחפש…</div>';
   try {
-    let results = [];
-    try {
-      results = await fetchOpenMeteo(q);
-    } catch (e) { console.warn('open-meteo failed', e); }
+    // Bundled Israeli list first (instant, offline, no rate policy), then
+    // Open-Meteo for the rest of the world, and only as a last resort
+    // Nominatim — which still catches colloquial names the official list
+    // files differently (נווה צוף is registered there as חלמיש).
+    let results = await searchIsraeliCities(q);
     if (!results.length) {
-      // the usual path for small yishuvim
+      try {
+        results = await fetchOpenMeteo(q);
+      } catch (e) { console.warn('open-meteo failed', e); }
+    }
+    if (!results.length) {
       results = await fetchNominatim(q);
     }
     if (mySeq !== searchSeq) return;          // a newer search already ran
@@ -1396,6 +1472,49 @@ function handlePhotoFile(file) {
   reader.readAsDataURL(file);
 }
 
+/* ---------- settings file ----------
+ * The file IS the account: no server, no registration, no key. A family sets
+ * the board up once, saves the file, and can send it in WhatsApp to open the
+ * same board on another phone. */
+
+function exportSettings() {
+  if (!settings) return;
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safe = (settings.name || 'לוח').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-');
+  a.download = 'הגדרות-' + safe + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  setStatus('ההגדרות נשמרו לקובץ. שמרו אותו — אפשר לפתוח אותו בכל מכשיר אחר.');
+}
+
+function importSettings(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const s = JSON.parse(reader.result);
+      if (!s || !s.name || !Array.isArray(s.cities) || !s.cities.length) {
+        throw new Error('bad shape');
+      }
+      if (!TEMPLATES[s.template]) s.template = 'classic';
+      if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
+      if (!TONES[s.tone]) s.tone = 'natural';
+      if (!Array.isArray(s.customCities)) s.customCities = [];
+      settings = s;
+      saveSettings(settings);
+      photoImage = null;
+      applySettingsToHeader();
+      closeWizardToBoard();
+      generate();
+    } catch (e) {
+      setStatus('הקובץ אינו קובץ הגדרות תקין של הכלי.', true);
+    }
+  };
+  reader.readAsText(file);
+}
+
 /* ---------- init ---------- */
 
 function initBoardScreen() {
@@ -1415,6 +1534,10 @@ $('btnMake').addEventListener('click', generate);
 $('btnDownload').addEventListener('click', download);
 $('btnShare').addEventListener('click', share);
 $('btnSettings').addEventListener('click', () => openWizard(settings));
+$('btnExport').addEventListener('click', exportSettings);
+$('btnImport').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => importSettings(e.target.files[0]));
+$('wizImport').addEventListener('click', () => $('importFile').click());
 
 $('wizNext').addEventListener('click', wizardNext);
 $('wizPrev').addEventListener('click', () => showStep(Math.max(0, wizardState.step - 1)));
@@ -1458,8 +1581,8 @@ async function boot() {
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       settings = defaultDraft();
       settings.photo = c.toDataURL('image/jpeg', 0.85);
-      settings.name = 'סגן יאיר נבנצאל הי״ד';
-      settings.dateLine = 'שנהרג בכ״ה אייר תשס״א';
+      settings.name = 'שם היקר/ה';
+      settings.dateLine = 'תאריך הפטירה';
       settings.verse = 'נר ה׳ נשמת אדם';
       settings.template = urlParams.get('tpl') || 'classic';
       settings.fontPair = urlParams.get('font') || 'classic';
