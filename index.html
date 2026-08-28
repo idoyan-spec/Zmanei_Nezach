@@ -290,6 +290,30 @@
   .tplgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
   .tplgrid .tname { font-size: 17px; font-weight: 700; margin-top: 6px; }
   .tplgrid input { display: none; }
+  .tplgrid .tplgroup {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 700;
+    color: #8a7a50;
+    border-bottom: 1px solid rgba(185,138,68,.35);
+    padding-bottom: 4px;
+    margin-top: 4px;
+  }
+  .tonegrid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tonegrid label.tonechip {
+    background: #fffdf6;
+    border: 2px solid rgba(185,138,68,.4);
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .tonegrid label.tonechip.checked {
+    background: #f3e9d2;
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+  .tonegrid input { display: none; }
 
   /* modal */
   #modalBack {
@@ -415,13 +439,13 @@
       <div class="citygrid" id="cityGrid"></div>
       <div id="cityCount"></div>
       <div class="field" style="margin-top:16px">
-        <label for="citySearch">לא מצאתם עיר? חפשו כל עיר בעולם</label>
+        <label for="citySearch">לא מצאתם? חפשו כל עיר או יישוב בעולם</label>
         <div class="citysearch">
-          <input type="text" id="citySearch" placeholder="הקלידו שם עיר, למשל: מיאמי">
+          <input type="text" id="citySearch" placeholder="שם יישוב, למשל: נווה צוף">
           <button id="citySearchBtn" class="iconbtn" type="button">🔍 חיפוש</button>
         </div>
         <div id="cityResults"></div>
-        <div class="hint">ערים שנוספו בחיפוש מחושבות לפי מנהג 18 דקות לפני השקיעה</div>
+        <div class="hint">גם יישובים קטנים נמצאים. לצד כל תוצאה אפשר לבחור את <strong>דקות הדלקת הנרות</strong> לפי מנהג המקום — ברירת המחדל 18 דקות (ובסביבת ירושלים 40, חיפה 30).</div>
       </div>
     </div>
 
@@ -429,6 +453,12 @@
     <div class="wstep" data-step="4">
       <h3>5 · בחרו עיצוב</h3>
       <div class="tplgrid" id="tplGrid"></div>
+      <div class="field" style="margin-top:16px; margin-bottom:0">
+        <label>גוון הצבע</label>
+        <div class="tonegrid" id="toneGrid"></div>
+        <div class="hint">כל גוון משנה את כל העיצובים — 12 עיצובים × 4 גוונים × 5 סגנונות כתב, מאות שילובים.
+          רוצים עיצוב נוסף שאינו כאן? כתבו לנו ונוסיף אותו לגלריה.</div>
+      </div>
     </div>
 
     <!-- step 6: fonts -->
@@ -457,7 +487,11 @@
         החישוב אסטרונומי ומדויק לפי קואורדינטות המיקום של כל עיר.
       </p>
       <p><strong>מנהגי הדלקת נרות:</strong> ירושלים — 40 דקות לפני השקיעה; חיפה — 30 דקות; שאר הערים בארץ ובחו״ל — 18 דקות
-        (<a href="https://www.hebcal.com/home/96/what-time-is-candle-lighting" target="_blank" rel="noopener">הסבר בהרחבה</a>).</p>
+        (<a href="https://www.hebcal.com/home/96/what-time-is-candle-lighting" target="_blank" rel="noopener">הסבר בהרחבה</a>).
+        ליישוב שנוסף בחיפוש אפשר <strong>לבחור את מספר הדקות בעצמכם</strong> לפי מנהג המקום, והמספר הנבחר מוצג לצד שם היישוב ברשימה.</p>
+      <p><strong>איתור יישובים:</strong> שמות וקואורדינטות מגיעים מ-<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
+        ולישובים קטנים מ-<a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> — מפת העולם השיתופית הפתוחה.
+        כדאי לוודא שהיישוב שנבחר הוא אכן שלכם (יש שמות כפולים).</p>
       <p><strong>צאת שבת וחג:</strong> לפי צאת הכוכבים (הופעת שלושה כוכבים בינוניים) בחישוב האסטרונומי של Hebcal.</p>
       <p style="background:#f3e9d2; border-radius:10px; padding:10px 14px;">
         ⚠️ הזמנים כאן הם עזר בלבד. הלכה למעשה מומלץ לאמת מול לוח הרבנות המקומית או לוח בית הכנסת שלכם —

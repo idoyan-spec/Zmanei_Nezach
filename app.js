@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-08-28 14:10 v2 fonts-cities-design';
+const BUILD = '2026-08-28 15:25 v3 city-search-osm';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -40,7 +40,40 @@ const TEMPLATES = {
   tchelet: {
     label: 'תכלת', file: 'templates/tchelet.jpg',
     ink: '#28486b', gold: '#8aa3c0', cream: '240,244,248', plaque: '#31517a'
+  },
+  /* --- Shabbat-themed --- */
+  candles: {
+    label: 'נרות שבת', file: 'templates/candles.jpg', shabbat: true,
+    ink: '#4a3b25', gold: '#b08d4f', cream: '250,245,230', plaque: '#4a3f2a'
+  },
+  challah: {
+    label: 'חלות וקידוש', file: 'templates/challah.jpg', shabbat: true,
+    ink: '#5a2a33', gold: '#a8853f', cream: '250,247,238', plaque: '#5e2f38'
+  },
+  'shabbat-table': {
+    label: 'שולחן שבת', file: 'templates/shabbat-table.jpg', shabbat: true,
+    ink: '#3a3f4a', gold: '#a3947a', cream: '248,248,246', plaque: '#474d59'
+  },
+  havdala: {
+    label: 'הבדלה', file: 'templates/havdala.jpg', shabbat: true,
+    ink: '#3a3550', gold: '#9a8fa8', cream: '245,242,234', plaque: '#3f3a5c',
+    titleInk: '#f2eee4', titleShadow: 'rgba(30,24,55,0.5)'
+  },
+  pomegranate: {
+    label: 'רימונים', file: 'templates/pomegranate.jpg', shabbat: true,
+    ink: '#5c232c', gold: '#b08d3f', cream: '249,246,236', plaque: '#5c232c'
   }
+};
+
+/* Tone variations — a real extra axis of choice without a server: the
+ * template art is redrawn through a canvas filter before anything else is
+ * painted, so the adaptive lozenges measure the tinted result, not the
+ * original. */
+const TONES = {
+  natural: { label: 'טבעי',  filter: '' },
+  warm:    { label: 'חמים',  filter: 'sepia(0.32) saturate(1.12)' },
+  soft:    { label: 'רך',    filter: 'saturate(0.55) brightness(1.05)' },
+  deep:    { label: 'עמוק',  filter: 'saturate(1.3) contrast(1.08)' }
 };
 
 /* ---------- font pairs ----------
@@ -92,6 +125,9 @@ const CITIES = [
   { key: 'modiin',    name: 'מודיעין',   lat: 31.8928, lng: 35.0153,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'ariel',     name: 'שומרון',    lat: 32.1046, lng: 35.1745,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'katzrin',   name: 'רמת הגולן', lat: 32.9925, lng: 35.6899,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
+  /* on the original board and absent from every public gazetteer, so it
+   * cannot be recovered by search — it has to ship as a preset */
+  { key: 'neveyair',  name: 'נווה יאיר', lat: 31.3600, lng: 34.4200,  tzid: 'Asia/Jerusalem',      candles: 18, israel: true },
   { key: 'london',    name: 'לונדון',    lat: 51.5074, lng: -0.1278,  tzid: 'Europe/London',       candles: 18, israel: false },
   { key: 'newyork',   name: 'ניו יורק',  lat: 40.7128, lng: -74.0060, tzid: 'America/New_York',    candles: 18, israel: false },
   { key: 'paris',     name: 'פריז',      lat: 48.8566, lng: 2.3522,   tzid: 'Europe/Paris',        candles: 18, israel: false },
@@ -147,6 +183,7 @@ function loadSettings() {
     if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
     if (!Array.isArray(s.customCities)) s.customCities = [];
     if (!s.photoZoom) s.photoZoom = 100;
+    if (!TONES[s.tone]) s.tone = 'natural';
     return s;
   } catch (e) { return null; }
 }
@@ -665,10 +702,26 @@ function drawRows(rows) {
   ctx.restore();
 }
 
+/* the template art with the chosen tone baked in (cached per template+tone) */
+let toneCache = { key: '', canvas: null };
+function tonedBg() {
+  const tone = TONES[settings.tone] ? settings.tone : 'natural';
+  if (tone === 'natural' || !BLUR_OK) return bgImage;   // BLUR_OK == ctx.filter works
+  const key = bgFile + '|' + tone;
+  if (toneCache.key === key && toneCache.canvas) return toneCache.canvas;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.filter = TONES[tone].filter;
+  x.drawImage(bgImage, 0, 0, W, H);
+  toneCache = { key, canvas: c };
+  return c;
+}
+
 function drawBoard(plan, rows) {
   const labels = LABELS[plan.mode];
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(bgImage, 0, 0, W, H);
+  ctx.drawImage(tonedBg(), 0, 0, W, H);
   drawPhoto();
   drawTitle(labels.title, plan.name);
   drawHeaders(labels.right, labels.left);
@@ -802,6 +855,7 @@ function defaultDraft() {
     cities: ['jerusalem', 'telaviv', 'haifa', 'beersheva'],
     customCities: [],
     template: 'classic',
+    tone: 'natural',
     fontPair: 'classic'
   };
 }
@@ -873,10 +927,23 @@ function fillWizardFields() {
   $('cityResults').innerHTML = '';
   $('citySearch').value = '';
 
-  // templates
+  // templates, grouped — twelve tiles in one undifferentiated wall is hard to scan
   const tg = $('tplGrid');
   tg.innerHTML = '';
-  Object.entries(TEMPLATES).forEach(([key, t]) => {
+  const groups = [
+    ['שבת ומועד', Object.entries(TEMPLATES).filter(([, t]) => t.shabbat)],
+    ['נוף וטבע', Object.entries(TEMPLATES).filter(([, t]) => !t.shabbat)]
+  ];
+  groups.forEach(([groupName, entries]) => {
+    if (!entries.length) return;
+    const head = document.createElement('div');
+    head.className = 'tplgroup';
+    head.textContent = groupName;
+    tg.appendChild(head);
+    entries.forEach(([key, t]) => renderTplTile(key, t, tg, d));
+  });
+
+  function renderTplTile(key, t, tg, d) {
     const label = document.createElement('label');
     const rb = document.createElement('input');
     rb.type = 'radio';
@@ -898,7 +965,30 @@ function fillWizardFields() {
     label.appendChild(img);
     label.appendChild(nm);
     tg.appendChild(label);
+  }
+
+  // tone variations
+  const tn = $('toneGrid');
+  tn.innerHTML = '';
+  Object.entries(TONES).forEach(([key, t]) => {
+    const label = document.createElement('label');
+    label.className = 'tonechip';
+    const rb = document.createElement('input');
+    rb.type = 'radio';
+    rb.name = 'tonePick';
+    rb.value = key;
+    rb.checked = (d.tone || 'natural') === key;
+    if (rb.checked) label.classList.add('checked');
+    rb.addEventListener('change', () => {
+      tn.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
+      label.classList.add('checked');
+      applyTonePreview(key);
+    });
+    label.appendChild(rb);
+    label.appendChild(document.createTextNode(t.label));
+    tn.appendChild(label);
   });
+  applyTonePreview(d.tone || 'natural');
 
   // font pairs
   const fg = $('fontGrid');
@@ -944,6 +1034,13 @@ function fillWizardFields() {
   }
 }
 
+/* the tone applies to every thumbnail at once, so the grid always shows the
+ * designs as they will actually be printed */
+function applyTonePreview(toneKey) {
+  const f = (TONES[toneKey] || TONES.natural).filter;
+  $('tplGrid').querySelectorAll('img').forEach(img => { img.style.filter = f; });
+}
+
 /* live preview of the actual crop + feather, on a neutral paper tone */
 function refreshPhotoPreview() {
   const d = wizardState.draft;
@@ -985,68 +1082,218 @@ function renderCityGrid() {
     });
     label.appendChild(cb);
     label.appendChild(document.createTextNode(c.name));
+    // searched-in cities show their candle custom, so a wrong one is visible
+    if (!CITIES.some(p => p.key === c.key)) {
+      const tag = document.createElement('small');
+      tag.style.cssText = 'color:#8a7a50; font-size:13px; margin-inline-start:auto';
+      tag.textContent = c.candles + ' דק׳';
+      label.appendChild(tag);
+    }
     grid.appendChild(label);
   });
   updateCityCount();
 }
 
-/* ---------- city search (Open-Meteo geocoding — free, no key, CORS open) ---------- */
+/* ---------- city search ----------
+ * Two sources, because neither alone is enough:
+ *   Open-Meteo geocoding — fast, ships a timezone, but its gazetteer has
+ *     almost no small Israeli yishuvim (נווה צוף, טלמון, נוקדים… all missing).
+ *   Nominatim / OpenStreetMap — has every yishuv, but returns no timezone.
+ * Open-Meteo answers first; Nominatim fills the (very common) gap, and the
+ * timezone is then derived from the coordinates. */
+
+const IL_BOX = { latMin: 29.3, latMax: 33.45, lngMin: 34.2, lngMax: 35.95 };
+function inIsrael(lat, lng) {
+  return lat >= IL_BOX.latMin && lat <= IL_BOX.latMax &&
+         lng >= IL_BOX.lngMin && lng <= IL_BOX.lngMax;
+}
+
+function distKm(lat1, lng1, lat2, lng2) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/* Candle-lighting minutes follow local custom, and getting this wrong is a
+ * halachic error, not a cosmetic one — so a searched city near Jerusalem or
+ * Haifa inherits that city's minhag instead of the 18-minute default. */
+function autoCandles(lat, lng) {
+  if (distKm(lat, lng, 31.778, 35.235) <= 12) return 40;
+  if (distKm(lat, lng, 32.794, 34.989) <= 12) return 30;
+  return 18;
+}
+
+const CANDLE_CHOICES = [15, 18, 20, 22, 25, 30, 40];
+
+async function fetchOpenMeteo(q) {
+  const url = 'https://geocoding-api.open-meteo.com/v1/search?count=6&language=he&format=json&name=' +
+    encodeURIComponent(q);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return (data.results || []).filter(r => r.timezone).map(r => ({
+    key: 'g' + r.id,
+    name: r.name,
+    region: [r.admin1 && r.admin1 !== r.name ? r.admin1 : '', r.country].filter(Boolean).join(' · '),
+    lat: r.latitude,
+    lng: r.longitude,
+    tzid: r.timezone
+  }));
+}
+
+async function fetchNominatim(q) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6' +
+    '&accept-language=he&addressdetails=1&q=' + encodeURIComponent(q);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return (data || []).map(r => {
+    const a = r.address || {};
+    const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+    // Inside Israel the country label is politically loaded and unhelpful —
+    // show the district instead, which is what a reader actually needs.
+    const region = inIsrael(lat, lng)
+      ? (a.state || a.county || 'ישראל')
+      : [a.state || a.county, a.country].filter(Boolean).join(' · ');
+    return {
+      key: 'osm' + r.osm_id,
+      name: r.name || (r.display_name || '').split(',')[0],
+      region,
+      lat,
+      lng,
+      tzid: null                 // resolved on add
+    };
+  }).filter(r => r.name && isFinite(r.lat) && isFinite(r.lng));
+}
+
+/* Nominatim gives no timezone. Inside Israel it is unambiguous; elsewhere
+ * ask Open-Meteo's forecast endpoint, which reports the tz for a point. */
+async function resolveTz(lat, lng) {
+  if (inIsrael(lat, lng)) return 'Asia/Jerusalem';
+  try {
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?forecast_days=1&timezone=auto' +
+      '&latitude=' + lat + '&longitude=' + lng);
+    if (res.ok) {
+      const d = await res.json();
+      if (d.timezone) return d.timezone;
+    }
+  } catch (e) { /* fall through */ }
+  return null;
+}
+
+let searchSeq = 0;
 
 async function searchCity() {
   const q = $('citySearch').value.trim();
   const box = $('cityResults');
   if (!q) { box.innerHTML = ''; return; }
+  const mySeq = ++searchSeq;
   box.innerHTML = '<div class="cnote">מחפש…</div>';
   try {
-    const url = 'https://geocoding-api.open-meteo.com/v1/search?count=6&language=he&format=json&name=' +
-      encodeURIComponent(q);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const results = (data.results || []).filter(r => r.timezone);
+    let results = [];
+    try {
+      results = await fetchOpenMeteo(q);
+    } catch (e) { console.warn('open-meteo failed', e); }
     if (!results.length) {
-      box.innerHTML = '<div class="cnote">לא נמצאו ערים בשם הזה — נסו איות אחר או שם באנגלית</div>';
+      // the usual path for small yishuvim
+      results = await fetchNominatim(q);
+    }
+    if (mySeq !== searchSeq) return;          // a newer search already ran
+
+    // OSM often returns the same place several times (village node, boundary
+    // relation, place point) — collapse anything with the same name within
+    // about a kilometre so the user sees one row per real place.
+    const seen = [];
+    results = results.filter(r => {
+      const dup = seen.some(s => s.name === r.name && distKm(s.lat, s.lng, r.lat, r.lng) < 1);
+      if (!dup) seen.push(r);
+      return !dup;
+    });
+
+    if (!results.length) {
+      box.innerHTML = '<div class="cnote">לא נמצא יישוב בשם הזה — נסו איות אחר, שם מלא, או שם באנגלית</div>';
       return;
     }
     box.innerHTML = '';
-    results.forEach(r => {
-      const row = document.createElement('div');
-      row.className = 'cres';
-      const info = document.createElement('span');
-      info.textContent = r.name + (r.country ? ' · ' + r.country : '') +
-        (r.admin1 && r.admin1 !== r.name ? ' (' + r.admin1 + ')' : '');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'iconbtn';
-      btn.textContent = '+ הוספה';
-      btn.addEventListener('click', () => addCustomCity(r, row));
-      row.appendChild(info);
-      row.appendChild(btn);
-      box.appendChild(row);
-    });
+    results.forEach(r => renderResultRow(r, box));
   } catch (e) {
     console.error(e);
-    box.innerHTML = '<div class="cnote">שגיאה בחיפוש — בדקו את חיבור האינטרנט ונסו שוב</div>';
+    if (mySeq === searchSeq) {
+      box.innerHTML = '<div class="cnote">שגיאה בחיפוש — בדקו את חיבור האינטרנט ונסו שוב</div>';
+    }
   }
 }
 
-function addCustomCity(r, rowEl) {
+function renderResultRow(r, box) {
+  const row = document.createElement('div');
+  row.className = 'cres';
+
+  const info = document.createElement('span');
+  info.textContent = r.name + (r.region ? ' · ' + r.region : '');
+
+  const right = document.createElement('span');
+  right.style.display = 'flex';
+  right.style.gap = '6px';
+  right.style.alignItems = 'center';
+
+  const sel = document.createElement('select');
+  sel.title = 'דקות הדלקת נרות לפני השקיעה';
+  const auto = autoCandles(r.lat, r.lng);
+  CANDLE_CHOICES.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m;
+    o.textContent = m + ' דק׳';
+    if (m === auto) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'iconbtn';
+  btn.textContent = '+ הוספה';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'מוסיף…';
+    const ok = await addCustomCity(r, Number(sel.value));
+    if (ok) {
+      row.remove();
+    } else {
+      btn.disabled = false;
+      btn.textContent = '+ הוספה';
+      const note = document.createElement('div');
+      note.className = 'cnote';
+      note.textContent = 'לא הצלחתי לקבוע אזור זמן ליישוב הזה — נסו יישוב סמוך גדול יותר';
+      box.appendChild(note);
+    }
+  });
+
+  right.appendChild(sel);
+  right.appendChild(btn);
+  row.appendChild(info);
+  row.appendChild(right);
+  box.appendChild(row);
+}
+
+async function addCustomCity(r, candles) {
   const d = wizardState.draft;
-  const key = 'g' + r.id;
-  if (!allCities(d).some(c => c.key === key)) {
+  const tzid = r.tzid || await resolveTz(r.lat, r.lng);
+  if (!tzid) return false;
+  if (!allCities(d).some(c => c.key === r.key)) {
     d.customCities.push({
-      key,
+      key: r.key,
       name: r.name,
-      lat: r.latitude,
-      lng: r.longitude,
-      tzid: r.timezone,
-      candles: 18,
-      israel: r.timezone === 'Asia/Jerusalem'
+      lat: r.lat,
+      lng: r.lng,
+      tzid,
+      candles: candles || 18,
+      israel: tzid === 'Asia/Jerusalem'
     });
   }
-  if (!d.cities.includes(key)) d.cities.push(key);
+  if (!d.cities.includes(r.key)) d.cities.push(r.key);
   renderCityGrid();
-  if (rowEl) rowEl.remove();
+  return true;
 }
 
 function updateCityCount() {
@@ -1090,6 +1337,8 @@ function collectStep(i) {
     const rb = document.querySelector('input[name="tplPick"]:checked');
     if (!rb) return 'בחרו אחד מהעיצובים';
     d.template = rb.value;
+    const tn = document.querySelector('input[name="tonePick"]:checked');
+    d.tone = tn ? tn.value : 'natural';
   } else if (i === 5) {
     const rb = document.querySelector('input[name="fontPick"]:checked');
     if (!rb) return 'בחרו סגנון כתב';
@@ -1214,6 +1463,7 @@ async function boot() {
       settings.verse = 'נר ה׳ נשמת אדם';
       settings.template = urlParams.get('tpl') || 'classic';
       settings.fontPair = urlParams.get('font') || 'classic';
+      settings.tone = urlParams.get('tone') || 'natural';
       settings.cities = ['jerusalem', 'telaviv', 'haifa', 'beersheva', 'ariel', 'katzrin', 'london'];
       saveSettings(settings);
     } catch (e) { console.error('demo seed failed', e); }
