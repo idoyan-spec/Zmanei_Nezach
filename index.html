@@ -648,28 +648,47 @@
   .citysearch { display: flex; gap: 8px; }
   .citysearch input { flex: 1; min-width: 0; }
   #cityResults { margin-top: 10px; display: grid; gap: 7px; }
+  /* A card, not a row: three decisions (name, minutes, add) never fit on one
+     line, and the add button used to be pushed off the card edge where all
+     that showed was a meaningless "+ ה". */
   #cityResults .cres {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
     background: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: var(--r-md);
-    padding: 9px 13px;
+    padding: 11px 13px 12px;
     font-size: 15.5px;
   }
-  #cityResults .cresname { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
-  #cityResults .cresname small { color: var(--ink-3); font-size: 13px; padding-inline-start: 8px; }
+  #cityResults .creslabel {
+    display: block; font-size: 13px; color: var(--ink-3);
+    margin-bottom: 4px; font-weight: 500;
+  }
+  #cityResults .cresmeta { color: var(--ink-3); font-size: 13px; margin-top: 4px; padding-inline-start: 2px; }
   /* reads as a label, behaves as a field: the geocoder's answer is often
      almost-right, and correcting it should not feel like filling a form */
   #cityResults .namebox {
     font: inherit; font-weight: 600; color: var(--ink);
-    background: transparent; border: 1.5px dashed rgba(169,127,56,.42);
-    border-radius: 8px; padding: 4px 8px; width: 100%; min-height: 0;
-    transition: border-color .15s, background .15s;
+    background: #fff; border: 1.5px solid rgba(169,127,56,.5);
+    border-radius: 9px; padding: 7px 10px; width: 100%; min-height: 0;
+    transition: border-color .15s, box-shadow .15s;
   }
   #cityResults .namebox:hover { border-color: var(--gold); }
-  #cityResults .namebox:focus { background: #fff; border-style: solid; border-color: var(--gold); outline: none; }
-  #cityResults .cres select { min-height: 40px; padding: 6px 30px 6px 10px; font-size: 14.5px; flex: none; }
-  #cityResults .cres button { min-height: 40px; padding: 6px 16px; font-size: 15px; flex: none; white-space: nowrap; }
+  #cityResults .namebox:focus {
+    border-color: var(--gold); outline: none;
+    box-shadow: 0 0 0 3px rgba(169,127,56,.16);
+  }
+  #cityResults .cresact {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    margin-top: 11px; padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  #cityResults .cresact .creslabel { margin-bottom: 0; flex: none; }
+  /* the card lives inside a .field, which sets select{width:100%} — that is
+     right for a form field and wrong for a control sitting in a row */
+  #cityResults .cres select {
+    min-height: 40px; padding: 6px 30px 6px 10px; font-size: 14.5px;
+    flex: none; width: auto; min-width: 104px;
+  }
+  #cityResults .cresadd { min-height: 40px; padding: 8px 18px; font-size: 15px; white-space: nowrap; margin-inline-start: auto; }
   #cityResults .cnote { font-size: 14px; color: var(--ink-3); padding: 4px 2px; }
 
   /* ---- design gallery ---- */
@@ -1172,6 +1191,9 @@
     &nbsp;·&nbsp;
     <a href="mailto:idoyan@gmail.com?subject=%D7%96%D7%9E%D7%A0%D7%99%20%D7%A0%D7%A6%D7%97%20%E2%80%94%20%D7%A4%D7%A0%D7%99%D7%99%D7%94">פנייה / בקשת עיצוב</a>
   </footer>
-  <script src="app.js"></script>
+  <!-- The version query is what makes a deploy actually reach a returning
+       family: without it a browser that has app.js cached keeps running last
+       week's code against this week's index.html. Bump it with BUILD. -->
+  <script src="app.js?v=8"></script>
 </body>
 </html>

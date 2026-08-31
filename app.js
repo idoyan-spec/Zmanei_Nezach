@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-01 09:40 v7 watercolour-depth-city-rename';
+const BUILD = '2026-09-01 11:20 v8 search-result-card';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -2291,33 +2291,51 @@ async function searchCity() {
 }
 
 function renderResultRow(r, box) {
+  /* Laid out as a small labelled card rather than one dense line. A geocoder
+   * answer needs three decisions from the user — is the name right, are the
+   * candle minutes right, do you want it — and squeezing all three onto one
+   * row pushed the add button off the edge of the card, where it read as a
+   * mysterious "+ ה". Each part is now labelled and on a line that can wrap. */
   const row = document.createElement('div');
   row.className = 'cres';
 
+  const uid = 'cres' + (renderResultRow.n = (renderResultRow.n || 0) + 1);
+
+  const cap = document.createElement('label');
+  cap.className = 'creslabel';
+  cap.setAttribute('for', uid);
+  cap.textContent = 'שם היישוב — כך הוא יודפס בלוח:';
+  row.appendChild(cap);
+
   /* Editable right here: this is the moment the user can see the name is
    * wrong, and making them add it first and fix it afterwards is a step too
-   * many. Looks like a label until it is clicked. */
-  const info = document.createElement('span');
-  info.className = 'cresname';
+   * many — a geocoder often answers with a shop inside the village. */
   const nameBox = document.createElement('input');
   nameBox.type = 'text';
+  nameBox.id = uid;
   nameBox.className = 'namebox';
   nameBox.value = r.name;
   nameBox.maxLength = 24;
   nameBox.title = 'אפשר לתקן את השם לפני ההוספה';
-  info.appendChild(nameBox);
+  row.appendChild(nameBox);
+
   if (r.region) {
-    const reg = document.createElement('small');
+    const reg = document.createElement('div');
+    reg.className = 'cresmeta';
     reg.textContent = r.region;
-    info.appendChild(reg);
+    row.appendChild(reg);
   }
 
-  const right = document.createElement('span');
-  right.style.display = 'flex';
-  right.style.gap = '6px';
-  right.style.alignItems = 'center';
+  const act = document.createElement('div');
+  act.className = 'cresact';
+
+  const cLab = document.createElement('label');
+  cLab.className = 'creslabel';
+  cLab.setAttribute('for', uid + 'c');
+  cLab.textContent = 'הדלקת נרות:';
 
   const sel = document.createElement('select');
+  sel.id = uid + 'c';
   sel.title = 'דקות הדלקת נרות לפני השקיעה';
   const auto = autoCandles(r.lat, r.lng);
   CANDLE_CHOICES.forEach(m => {
@@ -2330,8 +2348,8 @@ function renderResultRow(r, box) {
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'iconbtn';
-  btn.textContent = '+ הוספה';
+  btn.className = 'btn-gold cresadd';
+  btn.textContent = '+ הוספה לרשימה';
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'מוסיף…';
@@ -2341,7 +2359,7 @@ function renderResultRow(r, box) {
       row.remove();
     } else {
       btn.disabled = false;
-      btn.textContent = '+ הוספה';
+      btn.textContent = '+ הוספה לרשימה';
       const note = document.createElement('div');
       note.className = 'cnote';
       note.textContent = 'לא הצלחתי לקבוע אזור זמן ליישוב הזה — נסו יישוב סמוך גדול יותר';
@@ -2349,10 +2367,10 @@ function renderResultRow(r, box) {
     }
   });
 
-  right.appendChild(sel);
-  right.appendChild(btn);
-  row.appendChild(info);
-  row.appendChild(right);
+  act.appendChild(cLab);
+  act.appendChild(sel);
+  act.appendChild(btn);
+  row.appendChild(act);
   box.appendChild(row);
 }
 
