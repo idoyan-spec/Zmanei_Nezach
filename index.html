@@ -601,11 +601,13 @@
   /* ---- cities ---- */
   .citygrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
     gap: 9px;
   }
   .citygrid label {
+    position: relative;
     display: flex; align-items: center; gap: 9px;
+    padding-inline-end: 30px;
     background: var(--surface-2);
     border: 1.5px solid var(--line);
     border-radius: var(--r-md);
@@ -620,7 +622,27 @@
     border-color: rgba(169,127,56,.55);
     font-weight: 600;
   }
-  .citygrid input { accent-color: var(--gold); width: 19px; height: 19px; flex: none; }
+  .citygrid input[type=checkbox] { accent-color: var(--gold); width: 19px; height: 19px; flex: none; }
+  .citygrid .cnm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .citygrid .cmin { color: var(--ink-3); font-size: 13px; font-weight: 400; flex: none; }
+  /* the pencil stays quiet until the row is touched — it is a repair tool,
+     not something every family needs to notice */
+  .citygrid .ren {
+    position: absolute; inset-inline-end: 5px; top: 50%; transform: translateY(-50%);
+    border: 0; background: none; cursor: pointer;
+    color: var(--ink-3); font-size: 16px; line-height: 1;
+    padding: 3px 5px; border-radius: 7px; opacity: .35;
+    min-height: 0; min-width: 0; transition: opacity .15s, background .15s, color .15s;
+  }
+  .citygrid label:hover .ren, .citygrid label:focus-within .ren { opacity: 1; }
+  .citygrid .ren:hover { background: rgba(169,127,56,.16); color: var(--gold-deep, #8a6528); }
+  .citygrid .renbox {
+    flex: 1; min-width: 0; font: inherit; font-weight: 600;
+    border: 1.5px solid var(--gold); border-radius: 8px;
+    padding: 4px 8px; background: #fff; color: var(--ink);
+    min-height: 0;
+  }
+  @media (hover: none) { .citygrid .ren { opacity: .75; } }
   #cityCount { text-align: center; color: var(--ink-3); margin-top: 12px; font-size: 15px; }
 
   .citysearch { display: flex; gap: 8px; }
@@ -634,8 +656,20 @@
     padding: 9px 13px;
     font-size: 15.5px;
   }
-  #cityResults .cres select { min-height: 40px; padding: 6px 30px 6px 10px; font-size: 14.5px; }
-  #cityResults .cres button { min-height: 40px; padding: 6px 16px; font-size: 15px; }
+  #cityResults .cresname { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+  #cityResults .cresname small { color: var(--ink-3); font-size: 13px; padding-inline-start: 8px; }
+  /* reads as a label, behaves as a field: the geocoder's answer is often
+     almost-right, and correcting it should not feel like filling a form */
+  #cityResults .namebox {
+    font: inherit; font-weight: 600; color: var(--ink);
+    background: transparent; border: 1.5px dashed rgba(169,127,56,.42);
+    border-radius: 8px; padding: 4px 8px; width: 100%; min-height: 0;
+    transition: border-color .15s, background .15s;
+  }
+  #cityResults .namebox:hover { border-color: var(--gold); }
+  #cityResults .namebox:focus { background: #fff; border-style: solid; border-color: var(--gold); outline: none; }
+  #cityResults .cres select { min-height: 40px; padding: 6px 30px 6px 10px; font-size: 14.5px; flex: none; }
+  #cityResults .cres button { min-height: 40px; padding: 6px 16px; font-size: 15px; flex: none; white-space: nowrap; }
   #cityResults .cnote { font-size: 14px; color: var(--ink-3); padding: 4px 2px; }
 
   /* ---- design gallery ---- */
@@ -1028,6 +1062,9 @@
         <p class="lead">בחרו את הערים שבהן גרים בני המשפחה והחברים שיקבלו את הלוח.</p>
         <div class="citygrid" id="cityGrid"></div>
         <div id="cityCount"></div>
+        <div class="hint" style="text-align:center; margin-top:6px">
+          השם שמופיע כאן הוא השם שיודפס בלוח. לתיקון — לחצו על ✎ שליד היישוב.
+        </div>
         <div class="field" style="margin-top:22px">
           <label for="citySearch">לא מצאתם? חפשו כל עיר או יישוב בעולם</label>
           <div class="citysearch">
@@ -1036,8 +1073,10 @@
           </div>
           <div id="cityResults"></div>
           <div class="hint">
-            גם יישובים קטנים נמצאים. לצד כל תוצאה אפשר לבחור את <strong>דקות הדלקת הנרות</strong>
-            לפי מנהג המקום — ברירת המחדל 18 דקות (ובסביבת ירושלים 40, חיפה 30).
+            גם יישובים קטנים נמצאים. <strong>אפשר לתקן את השם</strong> בתוצאה לפני ההוספה —
+            לפעמים המפות מחזירות שם ארוך מדי, כמו שם החנות שביישוב. לצד כל תוצאה אפשר גם לבחור את
+            <strong>דקות הדלקת הנרות</strong> לפי מנהג המקום — ברירת המחדל 18 דקות
+            (ובסביבת ירושלים 40, חיפה 30).
           </div>
         </div>
       </div>
