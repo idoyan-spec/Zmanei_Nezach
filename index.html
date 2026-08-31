@@ -2,15 +2,19 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>זמני נצח — לוח שבת לזכרם</title>
+<title>זמני נצח — לוח זמני שבת לזכר יקיריכם</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1e2d55">
+<meta name="description" content="כלי חינמי ליצירת תמונת לוח זמני כניסת ויציאת שבת, מעוצבת ונושאת את תמונת יקירכם — מוכנה לשליחה בוואטסאפ בכל שבוע.">
+<meta property="og:title" content="זמני נצח — לוח זמני שבת לזכר יקיריכם">
+<meta property="og:description" content="מעלים תמונה של הנפטר/ת, בוחרים ערים ועיצוב, ומקבלים בכל שבוע תמונת לוח זמני שבת מוכנה לשיתוף. חינם, ללא הרשמה.">
+<meta property="og:type" content="website">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Bellefair&family=Secular+One&family=Heebo:wght@400;700&family=Amatic+SC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Bellefair&family=Secular+One&family=Heebo:wght@300;400;500;600;700&family=Amatic+SC:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @font-face {
     font-family: 'FrankRuhl';
@@ -35,351 +39,889 @@
     font-weight: 400;
     font-display: block;
   }
+
+  /* ============================================================
+     design tokens — one warm paper ground, one deep navy ink,
+     one gold accent. Everything else is derived from these.
+     ============================================================ */
   :root {
-    --navy: #1e2d55;
-    --navy-deep: #16224a;
-    --gold: #b98a44;
-    --cream: #f5efe0;
+    --ink:        #1d2743;
+    --ink-2:      #4d587a;
+    --ink-3:      #7b849f;
+    --gold:       #a97f38;
+    --gold-soft:  #d3ac5f;
+    --gold-tint:  rgba(169,127,56,.12);
+    --navy:       #23305a;
+    --navy-2:     #1a2547;
+    --green:      #2f6b48;
+
+    --bg-1:       #f8f5ee;
+    --bg-2:       #efeade;
+    --surface:    #fffdf9;
+    --surface-2:  #fbf8f1;
+    --line:       rgba(29,39,67,.10);
+    --line-2:     rgba(29,39,67,.16);
+
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+    --pill: 999px;
+
+    --sh-1: 0 1px 2px rgba(29,39,67,.05), 0 2px 8px rgba(29,39,67,.05);
+    --sh-2: 0 2px 4px rgba(29,39,67,.05), 0 8px 24px rgba(29,39,67,.08);
+    --sh-3: 0 4px 10px rgba(29,39,67,.07), 0 20px 50px rgba(29,39,67,.13);
+
+    --ui: 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --display: 'FrankRuhl', 'David', serif;
   }
+
   * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
   body {
     margin: 0;
-    font-family: 'FrankRuhl', 'David', serif;
-    background: linear-gradient(160deg, #eee6d2 0%, #e4dcc8 55%, #d7d3c6 100%);
-    color: var(--navy);
+    font-family: var(--ui);
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 620px at 88% -8%, rgba(169,127,56,.10), transparent 62%),
+      radial-gradient(900px 520px at 4% 4%, rgba(35,48,90,.08), transparent 58%),
+      linear-gradient(168deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-  header { text-align: center; padding: 22px 16px 4px; }
-  header h1 {
-    margin: 0;
-    font-weight: 900;
-    font-size: clamp(24px, 6.5vw, 34px);
+
+  ::selection { background: rgba(169,127,56,.22); }
+
+  :where(button, input, select, a):focus-visible {
+    outline: 2.5px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
   }
-  header .memorial {
-    margin-top: 6px;
-    font-size: clamp(15px, 4.2vw, 19px);
-    color: #6b5a35;
+
+  /* ---------------- app header ---------------- */
+  .apphead {
+    width: 100%;
+    text-align: center;
+    padding: 26px 18px 6px;
   }
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,.55);
-    border: 1px solid rgba(185,138,68,.45);
-    border-radius: 14px;
-    padding: 14px 18px;
-    margin: 16px 12px 6px;
-    width: min(94vw, 560px);
-    box-shadow: 0 4px 18px rgba(30,45,85,.08);
-  }
-  .controls label { font-size: 19px; font-weight: 700; }
-  input[type="date"], input[type="text"], select {
-    font-family: inherit;
-    font-size: 18px;
-    padding: 9px 10px;
-    border: 1px solid var(--gold);
-    border-radius: 9px;
-    background: #fffdf6;
-    color: var(--navy);
-    min-height: 44px;
-  }
-  button {
-    font-family: inherit;
-    font-size: 19px;
+  .apphead h1 {
+    font-family: var(--display);
     font-weight: 700;
-    padding: 11px 24px;
-    border-radius: 10px;
+    font-size: clamp(27px, 7vw, 38px);
+    letter-spacing: .01em;
+    margin: 0;
+    color: var(--navy);
+  }
+  .apphead h1::after {
+    content: '';
+    display: block;
+    width: 54px;
+    height: 2px;
+    margin: 10px auto 0;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .apphead .memorial {
+    margin-top: 9px;
+    font-size: clamp(14px, 3.9vw, 17px);
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
+  main { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+  /* ---------------- buttons ---------------- */
+  button {
+    font-family: var(--ui);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .005em;
+    padding: 12px 24px;
+    border-radius: var(--pill);
     border: none;
     cursor: pointer;
     min-height: 48px;
-    transition: transform .08s, box-shadow .15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
   }
-  button:active { transform: scale(.97); }
-  #btnMake { background: var(--navy); color: var(--cream); box-shadow: 0 3px 10px rgba(22,34,74,.35); }
-  #btnDownload { background: var(--gold); color: #fff; box-shadow: 0 3px 10px rgba(185,138,68,.4); display: none; }
-  #btnShare { background: #2e6b46; color: #fff; box-shadow: 0 3px 10px rgba(46,107,70,.4); display: none; }
-  .iconbtn {
-    background: rgba(255,255,255,.7);
-    border: 1px solid rgba(185,138,68,.5);
-    color: var(--navy);
-    font-size: 17px;
-    padding: 8px 16px;
+  button:active { transform: translateY(1px) scale(.99); }
+  button:disabled { opacity: .55; cursor: default; }
+
+  .btn-primary {
+    background: linear-gradient(175deg, #2c3b6b, var(--navy-2));
+    color: #f6f1e4;
+    box-shadow: 0 2px 5px rgba(26,37,71,.24), 0 10px 24px rgba(26,37,71,.20);
+  }
+  .btn-primary:hover { box-shadow: 0 3px 8px rgba(26,37,71,.28), 0 14px 32px rgba(26,37,71,.26); }
+
+  .btn-gold {
+    background: linear-gradient(175deg, #bd923f, #9a7130);
+    color: #fffaf0;
+    box-shadow: 0 2px 5px rgba(154,113,48,.24), 0 10px 24px rgba(154,113,48,.22);
+  }
+  .btn-green {
+    background: linear-gradient(175deg, #3a8058, #2b6142);
+    color: #f2fbf5;
+    box-shadow: 0 2px 5px rgba(47,107,72,.24), 0 10px 24px rgba(47,107,72,.22);
+  }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line-2);
+    box-shadow: var(--sh-1);
+    font-weight: 500;
+  }
+  .btn-ghost:hover { background: #fff; border-color: rgba(169,127,56,.45); }
+  .btn-quiet {
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid transparent;
+    font-weight: 500;
     min-height: 42px;
+    padding: 8px 16px;
   }
-  #status {
-    min-height: 26px;
-    font-size: 17px;
-    margin: 8px 0 2px;
-    color: #5a4a22;
+  .btn-quiet:hover { background: rgba(29,39,67,.05); color: var(--ink); }
+  .btn-lg { font-size: 18px; padding: 15px 34px; min-height: 56px; }
+
+  /* ---------------- surfaces ---------------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-2);
+  }
+
+  /* ============================================================
+     INTRO — the page a stranger lands on from a forwarded link
+     ============================================================ */
+  #screenIntro {
+    display: none;
+    width: min(94vw, 940px);
+    margin: 6px 0 30px;
+  }
+
+  .hero { text-align: center; padding: 6px 6px 4px; }
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gold);
+    background: var(--gold-tint);
+    border: 1px solid rgba(169,127,56,.22);
+    border-radius: var(--pill);
+    padding: 5px 15px;
+    margin-bottom: 16px;
+  }
+  .hero h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(25px, 6.2vw, 40px);
+    line-height: 1.25;
+    margin: 0 0 14px;
+    color: var(--navy);
+  }
+  .hero p.lede {
+    font-size: clamp(16px, 4.1vw, 19px);
+    line-height: 1.72;
+    color: var(--ink-2);
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .hero p.lede strong { color: var(--ink); font-weight: 600; }
+
+  .herowrap {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 34px;
+    align-items: center;
+    margin-top: 30px;
+    padding: 30px 32px;
+  }
+  .herowrap .heroText { text-align: right; }
+  .herowrap .heroText h3 {
+    font-family: var(--display);
+    font-size: 23px;
+    margin: 0 0 12px;
+    color: var(--navy);
+  }
+
+  /* the example board */
+  .sample { position: relative; }
+  .sample canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-3);
+    background: var(--surface-2);
+  }
+  .sample .badge {
+    position: absolute;
+    top: 12px;
+    inset-inline-start: 12px;
+    background: rgba(29,39,67,.82);
+    color: #fdf8ec;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    padding: 5px 14px;
+    border-radius: var(--pill);
+    backdrop-filter: blur(6px);
+  }
+  .sample figcaption {
+    margin: 12px 2px 0;
+    font-size: 14.5px;
+    color: var(--ink-3);
     text-align: center;
-    padding: 0 14px;
-    max-width: 640px;
   }
-  #status.err { color: #a02020; font-weight: 700; }
-  .preview { margin: 8px 0 6px; padding: 10px; }
+  .sample { margin: 0; }
+
+  /* how it works */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 26px;
+    counter-reset: st;
+  }
+  .steps li {
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px 20px 18px;
+    box-shadow: var(--sh-1);
+  }
+  .steps li::before {
+    counter-increment: st;
+    content: counter(st);
+    display: grid;
+    place-items: center;
+    width: 34px; height: 34px;
+    border-radius: var(--pill);
+    background: var(--gold-tint);
+    border: 1px solid rgba(169,127,56,.28);
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 11px;
+  }
+  .steps b { display: block; font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+  .steps span { font-size: 15px; color: var(--ink-2); line-height: 1.6; }
+
+  .introcta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+  }
+  .trust {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 22px;
+    margin-top: 20px;
+    font-size: 14.5px;
+    color: var(--ink-3);
+  }
+  .trust span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .notice {
+    margin-top: 24px;
+    padding: 16px 20px;
+    border-radius: var(--r-lg);
+    background: rgba(169,127,56,.07);
+    border: 1px solid rgba(169,127,56,.20);
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: #6d5526;
+  }
+  .notice b { color: #5a4520; }
+
+  /* ============================================================
+     BOARD SCREEN
+     ============================================================ */
+  #screenBoard { display: none; flex-direction: column; align-items: center; width: 100%; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 14px 18px;
+    margin: 18px 12px 8px;
+    width: min(94vw, 620px);
+    box-shadow: var(--sh-2);
+  }
+  .controls label { font-size: 16px; font-weight: 600; color: var(--ink-2); }
+
+  input[type="date"], input[type="text"], select, textarea {
+    font-family: var(--ui);
+    font-size: 16.5px;
+    color: var(--ink);
+    padding: 11px 14px;
+    border: 1.5px solid var(--line-2);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    min-height: 48px;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+  }
+  input[type="date"]:focus, input[type="text"]:focus, select:focus {
+    outline: none;
+    background: #fff;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 4px rgba(169,127,56,.14);
+  }
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 40px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' fill='none' stroke='%237b849f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: left 15px center;
+    cursor: pointer;
+  }
+
+  #status {
+    min-height: 24px;
+    font-size: 16px;
+    margin: 10px 0 2px;
+    color: var(--ink-2);
+    text-align: center;
+    padding: 0 16px;
+    max-width: 660px;
+  }
+  #status.err { color: #a8232a; font-weight: 600; }
+
+  .preview { margin: 10px 0 6px; padding: 8px; }
   #board {
     display: none;
     width: min(94vw, 640px);
     height: auto;
-    border-radius: 6px;
-    box-shadow: 0 14px 44px rgba(22,34,74,.35);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-3);
   }
   #saveHint {
     display: none;
-    font-size: 15px;
-    color: #6b5a35;
+    font-size: 14.5px;
+    color: var(--ink-3);
     text-align: center;
     padding: 0 16px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
+
   #backupNudge {
     display: none;
     width: min(94vw, 560px);
-    background: rgba(255,253,246,.92);
-    border: 1px solid rgba(185,138,68,.5);
-    border-radius: 14px;
-    padding: 14px 18px;
-    margin: 4px 12px 18px;
-    font-size: 16px;
-    line-height: 1.65;
-    color: #5a4a22;
-    text-align: center;
-    box-shadow: 0 4px 16px rgba(30,45,85,.08);
-  }
-  #backupNudge .nudgebtns {
-    display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap;
-  }
-  footer {
-    margin-top: auto;
-    padding: 10px;
-    font-size: 13px;
-    color: #8a8060;
-    text-align: center;
+    background: var(--surface);
+    border: 1px solid rgba(169,127,56,.28);
+    border-radius: var(--r-lg);
+    padding: 18px 22px;
+    margin: 6px 12px 20px;
+    font-size: 15.5px;
     line-height: 1.7;
+    color: var(--ink-2);
+    text-align: center;
+    box-shadow: var(--sh-2);
   }
-  footer a { color: #6b5a35; }
+  #backupNudge strong { color: var(--ink); }
+  #backupNudge .nudgebtns {
+    display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;
+  }
 
-  /* ---------- wizard ---------- */
+  /* ============================================================
+     WIZARD / SETTINGS
+     ============================================================ */
   #wizard {
     display: none;
-    width: min(96vw, 620px);
-    background: rgba(255,253,246,.92);
-    border: 1px solid rgba(185,138,68,.5);
-    border-radius: 18px;
-    box-shadow: 0 10px 34px rgba(30,45,85,.16);
-    margin: 14px 10px 24px;
-    padding: 20px 22px 24px;
+    width: min(96vw, 720px);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-3);
+    margin: 16px 10px 28px;
+    overflow: hidden;
   }
-  #wizard h2 {
-    margin: 0 0 4px;
+
+  .wizhead {
+    padding: 24px 28px 18px;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border-bottom: 1px solid var(--line);
+  }
+  .wizhead h2 {
+    font-family: var(--display);
     font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--navy);
     text-align: center;
   }
-  #wizard .stepnote {
+  .wizhead .stepnote {
     text-align: center;
-    color: #6b5a35;
-    font-size: 16px;
-    margin-bottom: 16px;
+    color: var(--ink-3);
+    font-size: 15px;
+    margin: 6px 0 16px;
   }
+  .wizmeta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14.5px;
+    margin-bottom: 9px;
+  }
+  #wizStepNum { color: var(--gold); font-weight: 600; letter-spacing: .01em; }
+  #wizStepName { color: var(--ink-2); font-weight: 500; }
+  .track {
+    height: 5px;
+    border-radius: var(--pill);
+    background: rgba(29,39,67,.09);
+    overflow: hidden;
+  }
+  #wizBar {
+    height: 100%;
+    width: 16.6%;
+    border-radius: var(--pill);
+    background: linear-gradient(90deg, var(--gold-soft), var(--gold));
+    transition: width .32s cubic-bezier(.4,0,.2,1);
+  }
+
+  .wizbody { padding: 24px 28px 8px; }
+
   .wstep { display: none; }
-  .wstep.active { display: block; }
-  .wstep h3 { font-size: 21px; margin: 6px 0 12px; }
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 17px; font-weight: 700; margin-bottom: 5px; }
+  .wstep.active { display: block; animation: stepin .28s ease both; }
+  @keyframes stepin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .wstep.active { animation: none; }
+    #wizBar { transition: none; }
+  }
+
+  .wstep > h3 {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--navy);
+  }
+  .wstep > .lead {
+    font-size: 15.5px;
+    color: var(--ink-2);
+    margin: 0 0 20px;
+    line-height: 1.65;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field > label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin-bottom: 7px;
+  }
   .field input[type="text"], .field select { width: 100%; }
-  .field .hint { font-size: 14px; color: #8a7a50; margin-top: 4px; }
+  .field .hint { font-size: 14px; color: var(--ink-3); margin-top: 7px; line-height: 1.6; }
+  .field .hint a { color: var(--gold); }
+
+  #wizErr {
+    color: #a8232a;
+    font-weight: 600;
+    font-size: 15.5px;
+    min-height: 22px;
+    text-align: center;
+    padding: 0 28px;
+  }
+
   .wnav {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 10px;
-    margin-top: 18px;
+    padding: 16px 28px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface-2);
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
   }
   .wnav .spacer { flex: 1; }
-  #wizErr { color: #a02020; font-weight: 700; font-size: 16px; min-height: 22px; text-align: center; }
-  .progress {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin: 4px 0 16px;
-  }
-  .progress span {
-    width: 34px; height: 6px; border-radius: 3px;
-    background: rgba(185,138,68,.25);
-  }
-  .progress span.on { background: var(--gold); }
 
-  /* photo step */
+  /* ---- photo step ---- */
   #photoDrop {
-    border: 2px dashed var(--gold);
-    border-radius: 14px;
-    padding: 18px;
+    border: 2px dashed rgba(169,127,56,.5);
+    border-radius: var(--r-lg);
+    padding: 26px 18px;
     text-align: center;
     cursor: pointer;
-    background: #fffdf6;
+    background: var(--surface-2);
+    transition: background .18s, border-color .18s;
   }
-  #photoDrop.has { border-style: solid; }
-  #photoPreviewWrap { display: none; text-align: center; margin-top: 12px; }
+  #photoDrop:hover { background: #fff; border-color: var(--gold); }
+  #photoDrop.has { border-style: solid; border-color: rgba(169,127,56,.35); padding: 16px; }
+  #photoDrop .ico { font-size: 34px; line-height: 1; }
+  #photoDrop .big { font-size: 17px; font-weight: 600; margin-top: 8px; color: var(--ink); }
+  #photoDrop .hint { font-size: 14px; color: var(--ink-3); margin-top: 6px; line-height: 1.6; }
+
+  #photoPreviewWrap { display: none; text-align: center; margin-top: 18px; }
   #photoPreviewCanvas {
     width: 200px; height: 240px;
-    border-radius: 12px;
-    border: 2px solid rgba(185,138,68,.6);
-    box-shadow: 0 6px 18px rgba(30,45,85,.25);
-    background: #f3ecdc;
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-2);
+    background: var(--surface-2);
   }
-  #photoPreviewWrap .hint { font-size: 14px; color: #8a7a50; margin-top: 6px; }
-  .slider { display: flex; align-items: center; gap: 10px; margin-top: 10px; justify-content: center; }
-  .slider span { min-width: 88px; text-align: left; }
-  .slider input[type="range"] { width: 200px; accent-color: var(--gold); }
+  #photoPreviewWrap .hint { font-size: 14px; color: var(--ink-3); margin-top: 8px; }
 
-  /* cities */
+  .slider {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 12px; justify-content: center;
+  }
+  .slider span { min-width: 92px; text-align: start; font-size: 14.5px; color: var(--ink-2); font-weight: 500; }
+  .slider input[type="range"] {
+    width: 210px;
+    accent-color: var(--gold);
+    height: 26px;
+  }
+
+  /* ---- cities ---- */
   .citygrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 9px;
   }
   .citygrid label {
-    display: flex; align-items: center; gap: 8px;
-    background: #fffdf6;
-    border: 1px solid rgba(185,138,68,.45);
-    border-radius: 10px;
-    padding: 9px 12px;
-    font-size: 17px;
+    display: flex; align-items: center; gap: 9px;
+    background: var(--surface-2);
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 11px 13px;
+    font-size: 16px;
     cursor: pointer;
+    transition: background .16s, border-color .16s;
   }
-  .citygrid label.checked { background: #f3e9d2; border-color: var(--gold); font-weight: 700; }
-  .citygrid input { accent-color: var(--gold); width: 18px; height: 18px; }
-  #cityCount { text-align: center; color: #6b5a35; margin-top: 10px; font-size: 16px; }
-  .citysearch { display: flex; gap: 8px; margin-top: 6px; }
+  .citygrid label:hover { border-color: var(--line-2); background: #fff; }
+  .citygrid label.checked {
+    background: rgba(169,127,56,.09);
+    border-color: rgba(169,127,56,.55);
+    font-weight: 600;
+  }
+  .citygrid input { accent-color: var(--gold); width: 19px; height: 19px; flex: none; }
+  #cityCount { text-align: center; color: var(--ink-3); margin-top: 12px; font-size: 15px; }
+
+  .citysearch { display: flex; gap: 8px; }
   .citysearch input { flex: 1; min-width: 0; }
-  #cityResults { margin-top: 8px; }
+  #cityResults { margin-top: 10px; display: grid; gap: 7px; }
   #cityResults .cres {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: #fffdf6;
-    border: 1px solid rgba(185,138,68,.4);
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 6px;
-    font-size: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 9px 13px;
+    font-size: 15.5px;
   }
-  #cityResults .cres button { min-height: 34px; padding: 4px 14px; font-size: 16px; }
-  #cityResults .cnote { font-size: 14px; color: #8a7a50; }
+  #cityResults .cres select { min-height: 40px; padding: 6px 30px 6px 10px; font-size: 14.5px; }
+  #cityResults .cres button { min-height: 40px; padding: 6px 16px; font-size: 15px; }
+  #cityResults .cnote { font-size: 14px; color: var(--ink-3); padding: 4px 2px; }
 
-  /* font pairs */
-  .fontgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  .fontgrid label {
-    display: block;
-    border: 3px solid transparent;
-    border-radius: 14px;
-    background: #fffdf6;
-    cursor: pointer;
-    padding: 12px 14px 10px;
-    text-align: center;
-  }
-  .fontgrid label.checked { border-color: var(--gold); box-shadow: 0 6px 18px rgba(185,138,68,.35); }
-  .fontgrid input { display: none; }
-  .fontgrid .ft { font-size: 26px; color: var(--navy); line-height: 1.25; }
-  .fontgrid .fb { font-size: 21px; color: #4a5578; margin-top: 2px; }
-  .fontgrid .fname { font-size: 15px; font-weight: 700; color: #6b5a35; margin-top: 8px; }
-
-  /* templates */
+  /* ---- design gallery ---- */
   .tplgrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 12px;
   }
-  .tplgrid label {
+  /* ten designs: five per row makes the gallery two full rows instead of a
+     row of four and a row with two orphans */
+  @media (min-width: 700px) {
+    .tplgrid { grid-template-columns: repeat(5, 1fr); }
+  }
+  .tplgrid label.tile {
     display: block;
-    border: 3px solid transparent;
-    border-radius: 14px;
-    overflow: hidden;
+    position: relative;
     cursor: pointer;
-    background: #fffdf6;
-    text-align: center;
-    padding-bottom: 8px;
+    border-radius: var(--r-lg);
+    padding: 6px;
+    border: 2px solid transparent;
+    background: transparent;
+    transition: border-color .18s, background .18s, transform .18s;
   }
-  .tplgrid label.checked { border-color: var(--gold); box-shadow: 0 6px 18px rgba(185,138,68,.35); }
-  .tplgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-  .tplgrid .tname { font-size: 17px; font-weight: 700; margin-top: 6px; }
-  .tplgrid input { display: none; }
-  .tplgrid .tplgroup {
-    grid-column: 1 / -1;
-    font-size: 16px;
-    font-weight: 700;
-    color: #8a7a50;
-    border-bottom: 1px solid rgba(185,138,68,.35);
-    padding-bottom: 4px;
-    margin-top: 4px;
-  }
-  .tonegrid { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tonegrid label.tonechip {
-    background: #fffdf6;
-    border: 2px solid rgba(185,138,68,.4);
-    border-radius: 999px;
-    padding: 7px 18px;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  .tonegrid label.tonechip.checked {
-    background: #f3e9d2;
+  .tplgrid label.tile:hover { transform: translateY(-2px); }
+  .tplgrid label.tile.checked {
     border-color: var(--gold);
-    font-weight: 700;
+    background: rgba(169,127,56,.08);
   }
-  .tonegrid input { display: none; }
+  .tplgrid input { position: absolute; opacity: 0; pointer-events: none; }
+  canvas.tileart {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-1);
+  }
+  .tilecap { display: block; text-align: center; margin-top: 9px; }
+  .tilecap b { display: block; font-size: 15.5px; font-weight: 600; color: var(--ink); }
+  .tilecap i { display: block; font-style: normal; font-size: 13px; color: var(--ink-3); margin-top: 1px; }
+  label.tile.checked::after {
+    content: '✓';
+    position: absolute;
+    top: 14px; inset-inline-end: 14px;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: var(--pill);
+    background: var(--gold);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
 
-  /* modal */
+  /* ---- palette swatches ---- */
+  .tonegrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 10px;
+  }
+  .tonegrid label.swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    padding: 10px 4px 9px;
+    border-radius: var(--r-md);
+    border: 2px solid transparent;
+    transition: background .16s, border-color .16s;
+  }
+  .tonegrid label.swatch:hover { background: rgba(29,39,67,.04); }
+  .tonegrid label.swatch.checked {
+    border-color: var(--gold);
+    background: rgba(169,127,56,.08);
+  }
+  .tonegrid input { position: absolute; opacity: 0; pointer-events: none; }
+  .tonegrid .dot {
+    width: 40px; height: 40px;
+    border-radius: var(--pill);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), var(--sh-1);
+  }
+  .tonegrid .swname { font-size: 13.5px; color: var(--ink-2); text-align: center; line-height: 1.35; }
+  .tonegrid label.swatch.checked .swname { color: var(--ink); font-weight: 600; }
+
+  /* ---- font pairs ---- */
+  .fontgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .fontgrid label {
+    display: block;
+    position: relative;
+    border: 2px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    cursor: pointer;
+    padding: 18px 16px 14px;
+    text-align: center;
+    transition: border-color .18s, background .18s, transform .18s;
+  }
+  .fontgrid label:hover { transform: translateY(-2px); background: #fff; }
+  .fontgrid label.checked { border-color: var(--gold); background: rgba(169,127,56,.07); }
+  .fontgrid label.checked::after {
+    content: '✓';
+    position: absolute;
+    top: 10px; inset-inline-end: 10px;
+    width: 24px; height: 24px;
+    display: grid; place-items: center;
+    border-radius: var(--pill);
+    background: var(--gold);
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  .fontgrid input { position: absolute; opacity: 0; pointer-events: none; }
+  .fontgrid .ft { font-size: 26px; color: var(--navy); line-height: 1.3; }
+  .fontgrid .fb { font-size: 20px; color: var(--ink-2); margin-top: 3px; }
+  .fontgrid .fname {
+    font-family: var(--ui);
+    font-size: 13.5px; font-weight: 600; color: var(--ink-3);
+    margin-top: 11px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---------------- modal ---------------- */
   #modalBack {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(22,34,74,.45);
+    background: rgba(20,27,48,.5);
+    backdrop-filter: blur(3px);
     z-index: 40;
     align-items: center; justify-content: center;
     padding: 16px;
   }
   #modalBack.open { display: flex; }
   #modal {
-    background: #fffdf6;
-    border-radius: 16px;
-    max-width: 560px;
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    max-width: 600px;
     width: 100%;
-    max-height: 84vh;
+    max-height: 86vh;
     overflow: auto;
-    padding: 22px 24px;
-    box-shadow: 0 18px 50px rgba(0,0,0,.35);
-    font-size: 17px;
+    padding: 28px 30px 24px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.34);
+    font-size: 16px;
     line-height: 1.75;
+    color: var(--ink-2);
   }
-  #modal h3 { margin-top: 0; }
-  #modal a { color: #1e2d55; font-weight: 700; }
+  #modal h3 {
+    font-family: var(--display);
+    font-size: 22px;
+    color: var(--navy);
+    margin: 0 0 14px;
+  }
+  #modal strong { color: var(--ink); }
+  #modal a { color: var(--gold); font-weight: 600; }
+  #modal .warn {
+    background: rgba(169,127,56,.09);
+    border: 1px solid rgba(169,127,56,.22);
+    border-radius: var(--r-md);
+    padding: 13px 16px;
+    color: #6d5526;
+  }
 
-  @media (max-width: 480px) {
+  /* ---------------- footer ---------------- */
+  footer {
+    margin-top: auto;
+    padding: 20px 16px 26px;
+    font-size: 13.5px;
+    color: var(--ink-3);
+    text-align: center;
+    line-height: 1.9;
+  }
+  footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line-2); }
+  footer a:hover { color: var(--gold); border-color: var(--gold); }
+  #buildStamp { opacity: .7; font-size: 12.5px; }
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width: 820px) {
+    .herowrap { grid-template-columns: 1fr; gap: 24px; padding: 24px 20px; }
+    .herowrap .heroText { text-align: center; }
+    .steps { grid-template-columns: 1fr; }
+    .steps li { display: grid; grid-template-columns: 34px 1fr; gap: 0 14px; align-items: start; padding: 16px 18px; }
+    .steps li::before { margin-bottom: 0; grid-row: span 2; }
+  }
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .wizhead { padding: 20px 18px 16px; }
+    .wizbody { padding: 20px 18px 6px; }
+    .wnav { padding: 14px 18px 16px; flex-wrap: wrap; }
+    #wizErr { padding: 0 18px; }
     .controls { flex-direction: column; align-items: stretch; text-align: center; }
     .controls label { align-self: center; }
-    button { width: 100%; }
-    .wnav { flex-direction: column-reverse; }
+    .controls button, .introcta button { width: 100%; }
+    .wnav .spacer { display: none; }
+    .wnav button { flex: 1 1 42%; }
+    .tplgrid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+    .tonegrid { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }
+    #modal { padding: 22px 20px 18px; }
   }
 </style>
 </head>
 <body>
-  <header>
+  <header class="apphead">
     <h1 id="appTitle">זמני נצח</h1>
     <div class="memorial" id="memorialLine">לוח זמני שבת אישי — לזכר יקיריכם</div>
   </header>
 
-  <!-- ================= board screen ================= -->
-  <div id="screenBoard" style="display:none; display:flex; flex-direction:column; align-items:center; width:100%;">
+<main>
+
+  <!-- ============================================================
+       INTRO — what a first-time visitor sees
+       ============================================================ -->
+  <section id="screenIntro">
+
+    <div class="hero">
+      <span class="kicker">🕯️ חינם · ללא הרשמה</span>
+      <h2>לוח זמני שבת — עם התמונה של מי שאיננו</h2>
+      <p class="lede">
+        זהו כלי חינמי שיוצר <strong>תמונה אחת</strong>: לוח זמני כניסת ויציאת שבת בערים שתבחרו,
+        ועליו <strong>התמונה והשם של יקירכם שנפטר</strong>. מגדירים פעם אחת — ובכל שבוע לוחצים כפתור
+        ומקבלים לוח מעודכן, מוכן לשליחה בוואטסאפ למשפחה ולחברים.
+      </p>
+    </div>
+
+    <div class="card herowrap">
+      <figure class="sample">
+        <div class="badge">דוגמה</div>
+        <canvas id="sampleBoard" width="1254" height="1254" aria-label="דוגמה ללוח זמני שבת שנוצר בכלי"></canvas>
+        <figcaption>כך ייראה הלוח שלכם. הזמנים בדוגמה אינם אמיתיים.</figcaption>
+      </figure>
+      <div class="heroText">
+        <h3>למי זה מיועד?</h3>
+        <p style="margin:0 0 14px; color:var(--ink-2); font-size:16px;">
+          למשפחות שמנציחות אדם יקר, ורוצות שהשם והפנים שלו יעברו כל שבוע במשפחה
+          ובקבוצות — בתוך משהו שימושי שאנשים באמת פותחים.
+        </p>
+        <h3>מה צריך להכין?</h3>
+        <p style="margin:0; color:var(--ink-2); font-size:16px;">
+          תמונה אחת ברורה של <strong>הנפטר או הנפטרת</strong>, השם כפי שתרצו שיופיע,
+          ורשימת הערים של המשפחה. זהו — כשתי דקות.
+        </p>
+      </div>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <b>מעלים תמונה</b>
+        <span>תמונה של יקירכם שנפטר — היא נשארת במכשיר שלכם בלבד.</span>
+      </li>
+      <li>
+        <b>בוחרים ערים ועיצוב</b>
+        <span>עד 8 ערים ויישובים בארץ ובעולם, רקע וגוון צבע לפי טעמכם.</span>
+      </li>
+      <li>
+        <b>מקבלים לוח כל שבוע</b>
+        <span>לוחצים "צור לוח", ומשתפים את התמונה המוכנה בוואטסאפ.</span>
+      </li>
+    </ol>
+
+    <div class="introcta">
+      <button id="introStart" class="btn-primary btn-lg">יצירת הלוח שלי →</button>
+      <button id="introImport" class="btn-ghost">📂 כבר יש לי קובץ הגדרות</button>
+    </div>
+
+    <div class="trust">
+      <span>✔️ ללא עלות וללא פרסומות</span>
+      <span>✔️ בלי הרשמה ובלי סיסמה</span>
+      <span>🔒 התמונה לא נשלחת לשום שרת</span>
+    </div>
+
+    <div class="notice">
+      <b>שימו לב:</b> התמונה שמעלים היא של <b>האדם שאותו מנציחים</b>, לא תמונה שלכם.
+      הכול נשמר במכשיר שלכם בלבד — אין כאן חשבון משתמש ואף אחד אחר לא רואה את מה שהזנתם.
+      הזמנים מחושבים לפי <a href="#" id="introSources">מקורות אסטרונומיים מוכרים</a>, והם עזר בלבד.
+    </div>
+  </section>
+
+  <!-- ============================================================
+       BOARD
+       ============================================================ -->
+  <section id="screenBoard">
     <div class="controls">
       <label for="datePick">בחרו תאריך:</label>
       <input type="date" id="datePick">
-      <button id="btnMake">צור לוח</button>
-      <button id="btnShare">📤 שיתוף התמונה</button>
-      <button id="btnDownload">⬇ הורדת התמונה</button>
-      <button id="btnSettings" class="iconbtn">⚙️ הגדרות</button>
+      <button id="btnMake" class="btn-primary">צור לוח</button>
+      <button id="btnShare" class="btn-green" style="display:none">📤 שיתוף התמונה</button>
+      <button id="btnDownload" class="btn-gold" style="display:none">⬇ הורדת התמונה</button>
+      <button id="btnSettings" class="btn-ghost">⚙️ הגדרות</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
 
@@ -395,118 +937,153 @@
       <strong>ההגדרות שלכם נשמרו במכשיר הזה אוטומטית.</strong><br>
       כדי שהלוח יעבוד גם בטלפון אחר — או אם הדפדפן ינוקה — כדאי לשמור גיבוי קטן פעם אחת.
       <div class="nudgebtns">
-        <button id="nudgeSave" class="iconbtn">💾 שמירת גיבוי</button>
-        <button id="nudgeLater" class="iconbtn">לא עכשיו</button>
+        <button id="nudgeSave" class="btn-ghost">💾 שמירת גיבוי</button>
+        <button id="nudgeLater" class="btn-quiet">לא עכשיו</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- ================= wizard ================= -->
-  <div id="wizard">
-    <h2 id="wizTitle">יצירת לוח שבת אישי</h2>
-    <div class="stepnote">כמה צעדים קצרים — והלוח לזכר יקירכם מוכן. אפשר לשנות הכול בכל רגע דרך ⚙️ הגדרות.</div>
-    <div class="progress" id="wizProgress"></div>
-
-    <!-- step 1: photo -->
-    <div class="wstep" data-step="0">
-      <h3>1 · תמונת יקירכם</h3>
-      <div id="photoDrop">
-        <div style="font-size:38px">🖼️</div>
-        <div style="font-size:18px; font-weight:700; margin-top:4px">לחצו לבחירת תמונה</div>
-        <div class="hint">מומלץ תמונה ברורה של הפנים והחזה. התמונה נשמרת רק במכשיר שלכם — היא לא נשלחת לשום שרת.</div>
+  <!-- ============================================================
+       WIZARD / SETTINGS
+       ============================================================ -->
+  <section id="wizard">
+    <div class="wizhead">
+      <h2 id="wizTitle">יצירת לוח שבת אישי</h2>
+      <div class="stepnote">אפשר לשנות הכול בכל רגע דרך ⚙️ הגדרות</div>
+      <div class="wizmeta">
+        <span id="wizStepNum">שלב 1 מתוך 6</span>
+        <span id="wizStepName">תמונת יקירכם</span>
       </div>
-      <input type="file" id="photoFile" accept="image/*" style="display:none">
-      <div id="photoPreviewWrap">
-        <canvas id="photoPreviewCanvas" width="400" height="480"></canvas>
-        <div class="hint">כך התמונה תשתלב בלוח — עם דהייה רכה בשוליים</div>
-        <div class="slider">
-          <span>מיקום אנכי:</span>
-          <input type="range" id="photoOffset" min="0" max="100" value="25">
+      <div class="track"><div id="wizBar"></div></div>
+    </div>
+
+    <div class="wizbody">
+
+      <!-- step 1: photo -->
+      <div class="wstep active" data-step="0">
+        <h3>תמונת יקירכם</h3>
+        <p class="lead">
+          העלו תמונה של <strong>האדם שאותו אתם מנציחים</strong> — היא תופיע במרכז הלוח,
+          משולבת ברקע בדהייה רכה.
+        </p>
+        <div id="photoDrop">
+          <div class="ico">🖼️</div>
+          <div class="big">לחצו לבחירת תמונה</div>
+          <div class="hint">
+            מומלץ תצלום ברור של הפנים והחזה.<br>
+            התמונה נשמרת רק במכשיר שלכם — היא לא נשלחת לשום שרת.
+          </div>
         </div>
-        <div class="slider">
-          <span>קרבה (זום):</span>
-          <input type="range" id="photoZoom" min="100" max="200" value="100">
+        <input type="file" id="photoFile" accept="image/*" style="display:none">
+        <div id="photoPreviewWrap">
+          <canvas id="photoPreviewCanvas" width="400" height="480"></canvas>
+          <div class="hint">כך התמונה תשתלב בלוח — עם דהייה רכה בשוליים</div>
+          <div class="slider">
+            <span>מיקום אנכי</span>
+            <input type="range" id="photoOffset" min="0" max="100" value="25">
+          </div>
+          <div class="slider">
+            <span>קרבה (זום)</span>
+            <input type="range" id="photoZoom" min="100" max="200" value="100">
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- step 2: details -->
-    <div class="wstep" data-step="1">
-      <h3>2 · פרטי ההנצחה</h3>
-      <div class="field">
-        <label for="fDedication">נוסח ההקדשה</label>
-        <select id="fDedication"></select>
-      </div>
-      <div class="field">
-        <label for="fName">שם יקירכם (כולל תואר אם תרצו)</label>
-        <input type="text" id="fName" placeholder='למשל: מרים בת אברהם ז״ל'>
-      </div>
-      <div class="field">
-        <label for="fDateLine">שורת התאריך / הנסיבות (לא חובה)</label>
-        <input type="text" id="fDateLine" placeholder='למשל: שנהרג בכ״ה אייר תשס״א'>
-        <div class="hint">כתבו בדיוק מה שתרצו שיופיע — תאריך עברי, נסיבות, או שניהם. אפשר גם להשאיר ריק.</div>
-      </div>
-    </div>
-
-    <!-- step 3: verse -->
-    <div class="wstep" data-step="2">
-      <h3>3 · משפט לזיכרון (לא חובה)</h3>
-      <div class="field">
-        <label for="fVerse">בחרו פסוק או משפט</label>
-        <select id="fVerse"></select>
-      </div>
-      <div class="field" id="fVerseCustomWrap" style="display:none">
-        <label for="fVerseCustom">המשפט שלכם</label>
-        <input type="text" id="fVerseCustom" placeholder="כתבו משפט אישי קצר">
-      </div>
-    </div>
-
-    <!-- step 4: cities -->
-    <div class="wstep" data-step="3">
-      <h3>4 · אילו ערים יופיעו בלוח?</h3>
-      <div class="citygrid" id="cityGrid"></div>
-      <div id="cityCount"></div>
-      <div class="field" style="margin-top:16px">
-        <label for="citySearch">לא מצאתם? חפשו כל עיר או יישוב בעולם</label>
-        <div class="citysearch">
-          <input type="text" id="citySearch" placeholder="שם יישוב, למשל: נווה צוף">
-          <button id="citySearchBtn" class="iconbtn" type="button">🔍 חיפוש</button>
+      <!-- step 2: details -->
+      <div class="wstep" data-step="1">
+        <h3>פרטי ההנצחה</h3>
+        <p class="lead">השורות האלה יופיעו על לוחית ההנצחה שבתחתית הלוח.</p>
+        <div class="field">
+          <label for="fDedication">נוסח ההקדשה</label>
+          <select id="fDedication"></select>
         </div>
-        <div id="cityResults"></div>
-        <div class="hint">גם יישובים קטנים נמצאים. לצד כל תוצאה אפשר לבחור את <strong>דקות הדלקת הנרות</strong> לפי מנהג המקום — ברירת המחדל 18 דקות (ובסביבת ירושלים 40, חיפה 30).</div>
+        <div class="field">
+          <label for="fName">שם יקירכם (כולל תואר אם תרצו)</label>
+          <input type="text" id="fName" placeholder="למשל: מרים בת אברהם ז״ל">
+        </div>
+        <div class="field">
+          <label for="fDateLine">שורת התאריך / הנסיבות (לא חובה)</label>
+          <input type="text" id="fDateLine" placeholder="למשל: שנהרג בכ״ה אייר תשס״א">
+          <div class="hint">כתבו בדיוק מה שתרצו שיופיע — תאריך עברי, נסיבות, או שניהם. אפשר גם להשאיר ריק.</div>
+        </div>
       </div>
-    </div>
 
-    <!-- step 5: design -->
-    <div class="wstep" data-step="4">
-      <h3>5 · בחרו עיצוב</h3>
-      <div class="tplgrid" id="tplGrid"></div>
-      <div class="field" style="margin-top:16px; margin-bottom:0">
-        <label>גוון הצבע</label>
-        <div class="tonegrid" id="toneGrid"></div>
-        <div class="hint">כל גוון משנה את כל העיצובים — 12 עיצובים × 4 גוונים × 5 סגנונות כתב, מאות שילובים.
-          רוצים עיצוב נוסף שאינו כאן? <a href="mailto:idoyan@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%A2%D7%99%D7%A6%D7%95%D7%91%20%D7%97%D7%93%D7%A9">כתבו לנו</a> ונוסיף אותו לגלריה לכולם.</div>
+      <!-- step 3: verse -->
+      <div class="wstep" data-step="2">
+        <h3>משפט לזיכרון</h3>
+        <p class="lead">שורה קצרה שתופיע לצד התאריך. לא חובה — אפשר לדלג.</p>
+        <div class="field">
+          <label for="fVerse">בחרו פסוק או משפט</label>
+          <select id="fVerse"></select>
+        </div>
+        <div class="field" id="fVerseCustomWrap" style="display:none">
+          <label for="fVerseCustom">המשפט שלכם</label>
+          <input type="text" id="fVerseCustom" placeholder="כתבו משפט אישי קצר">
+        </div>
       </div>
-    </div>
 
-    <!-- step 6: fonts -->
-    <div class="wstep" data-step="5">
-      <h3>6 · סגנון הכתב</h3>
-      <div class="fontgrid" id="fontGrid"></div>
+      <!-- step 4: cities -->
+      <div class="wstep" data-step="3">
+        <h3>הערים שיופיעו בלוח</h3>
+        <p class="lead">בחרו את הערים שבהן גרים בני המשפחה והחברים שיקבלו את הלוח.</p>
+        <div class="citygrid" id="cityGrid"></div>
+        <div id="cityCount"></div>
+        <div class="field" style="margin-top:22px">
+          <label for="citySearch">לא מצאתם? חפשו כל עיר או יישוב בעולם</label>
+          <div class="citysearch">
+            <input type="text" id="citySearch" placeholder="שם יישוב, למשל: נווה צוף">
+            <button id="citySearchBtn" class="btn-ghost" type="button">🔍 חיפוש</button>
+          </div>
+          <div id="cityResults"></div>
+          <div class="hint">
+            גם יישובים קטנים נמצאים. לצד כל תוצאה אפשר לבחור את <strong>דקות הדלקת הנרות</strong>
+            לפי מנהג המקום — ברירת המחדל 18 דקות (ובסביבת ירושלים 40, חיפה 30).
+          </div>
+        </div>
+      </div>
+
+      <!-- step 5: design -->
+      <div class="wstep" data-step="4">
+        <h3>עיצוב הרקע</h3>
+        <p class="lead">כל עיצוב מצויר מחדש בגוון שתבחרו — בחרו קודם צורה, ואז גוון.</p>
+        <div class="tplgrid" id="tplGrid"></div>
+        <div class="field" style="margin-top:24px; margin-bottom:6px">
+          <label>גוון הצבע</label>
+          <div class="tonegrid" id="toneGrid"></div>
+          <div class="hint">
+            10 עיצובים × 14 גוונים × 5 סגנונות כתב — 700 שילובים.
+            רוצים עיצוב שאינו כאן?
+            <a href="mailto:idoyan@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%A2%D7%99%D7%A6%D7%95%D7%91%20%D7%97%D7%93%D7%A9">כתבו לנו</a>
+            ונוסיף אותו לגלריה לכולם.
+          </div>
+        </div>
+      </div>
+
+      <!-- step 6: fonts -->
+      <div class="wstep" data-step="5">
+        <h3>סגנון הכתב</h3>
+        <p class="lead">כך ייראו הכותרת והזמנים על הלוח.</p>
+        <div class="fontgrid" id="fontGrid"></div>
+      </div>
+
     </div>
 
     <div id="wizErr"></div>
     <div class="wnav">
-      <button id="wizPrev" class="iconbtn">→ הקודם</button>
+      <button id="wizPrev" class="btn-quiet">→ הקודם</button>
       <span class="spacer"></span>
-      <button id="wizExport" class="iconbtn" style="display:none">💾 שמירת גיבוי</button>
-      <button id="wizImport" class="iconbtn">📂 יש לי קובץ הגדרות</button>
-      <button id="wizCancel" class="iconbtn" style="display:none">ביטול</button>
-      <button id="wizNext">הבא ←</button>
+      <button id="wizExport" class="btn-quiet" style="display:none">💾 גיבוי</button>
+      <button id="wizImport" class="btn-quiet">📂 קובץ הגדרות</button>
+      <button id="wizCancel" class="btn-quiet" style="display:none">ביטול</button>
+      <button id="wizNext" class="btn-primary">הבא ←</button>
     </div>
-  </div>
+  </section>
 
-  <!-- ================= sources modal ================= -->
+</main>
+
+  <!-- ============================================================
+       SOURCES MODAL
+       ============================================================ -->
   <div id="modalBack">
     <div id="modal">
       <h3>מקורות הזמנים ואמינותם</h3>
@@ -525,12 +1102,12 @@
         יש יישובים הרשומים בשמם הרשמי (למשל <strong>נווה צוף</strong> רשום כ<strong>חלמיש</strong>) — אם לא מצאתם, נסו את השם השני.
         כדאי לוודא שהיישוב שנבחר הוא אכן שלכם.</p>
       <p><strong>צאת שבת וחג:</strong> לפי צאת הכוכבים (הופעת שלושה כוכבים בינוניים) בחישוב האסטרונומי של Hebcal.</p>
-      <p style="background:#f3e9d2; border-radius:10px; padding:10px 14px;">
+      <p class="warn">
         ⚠️ הזמנים כאן הם עזר בלבד. הלכה למעשה מומלץ לאמת מול לוח הרבנות המקומית או לוח בית הכנסת שלכם —
         במיוחד בקהילות עם מנהג שונה.
       </p>
-      <div style="text-align:center; margin-top:14px">
-        <button id="modalClose" class="iconbtn">סגירה</button>
+      <div style="text-align:center; margin-top:18px">
+        <button id="modalClose" class="btn-ghost">סגירה</button>
       </div>
     </div>
   </div>
@@ -552,9 +1129,9 @@
 
   <footer>
     <span id="buildStamp"></span><br>
-    <a href="#" id="srcLink">ℹ️ מקורות הזמנים</a>
+    <a href="#" id="srcLink">מקורות הזמנים</a>
     &nbsp;·&nbsp;
-    <a href="mailto:idoyan@gmail.com?subject=%D7%96%D7%9E%D7%A0%D7%99%20%D7%A0%D7%A6%D7%97%20%E2%80%94%20%D7%A4%D7%A0%D7%99%D7%99%D7%94">✉️ פנייה / בקשת עיצוב</a>
+    <a href="mailto:idoyan@gmail.com?subject=%D7%96%D7%9E%D7%A0%D7%99%20%D7%A0%D7%A6%D7%97%20%E2%80%94%20%D7%A4%D7%A0%D7%99%D7%99%D7%94">פנייה / בקשת עיצוב</a>
   </footer>
   <script src="app.js"></script>
 </body>

@@ -1,80 +1,574 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-08-28 18:15 v5 auto-save-backup-nudge';
+const BUILD = '2026-08-31 14:20 v6 vector-designs-intro-ui';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
 
-/* ---------- templates ----------
- * Each template is a text-free background image plus the palette the code
- * draws with on top of it. `cream` is the paper tone the readability
- * lozenges fade toward, so it must match the template's paper. */
-const TEMPLATES = {
-  classic: {
-    label: 'קלאסי', file: 'templates/classic.webp',
-    ink: '#1e2d55', gold: '#b98a44', cream: '246,240,226', plaque: '#2f425a'
+/* ================= amorphous background engine =================
+ * The board art is no longer a photograph. Every design is drawn as vector
+ * shapes at export resolution, which buys three things a picture cannot:
+ *   - any design can be painted in any palette, because nothing is baked in;
+ *   - a gallery thumbnail is a real render, not a downscaled JPEG;
+ *   - the whole gallery costs zero bytes over the wire.
+ * A design is therefore a pair: a PATTERN (the composition) and a PALETTE
+ * (the colours). 10 x 14 = 140 backgrounds, times 5 type pairs. */
+
+/* deterministic noise, so a design looks identical every single week */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function hexA(hex, a) {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(ch => ch + ch).join('') : h;
+  const n = parseInt(full, 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+
+/* A closed organic outline: polar points with seeded jitter, joined by
+ * quadratics through their midpoints, so there is not a single straight
+ * segment or visible vertex anywhere on the curve. */
+function blobPath(c, cx, cy, rx, ry, pts, wob, rnd, rot) {
+  const P = [];
+  for (let i = 0; i < pts; i++) {
+    const a = rot + i / pts * Math.PI * 2;
+    const k = 1 + (rnd() * 2 - 1) * wob;
+    P.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  c.beginPath();
+  const m0 = mid(P[pts - 1], P[0]);
+  c.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < pts; i++) {
+    const cur = P[i], nxt = P[(i + 1) % pts];
+    const m = mid(cur, nxt);
+    c.quadraticCurveTo(cur[0], cur[1], m[0], m[1]);
+  }
+  c.closePath();
+}
+
+/* an organic shape whose colour dissolves to nothing before the outline —
+ * soft edged without relying on ctx.filter, which older iOS Safari drops.
+ * The colour is carried nearly to the rim and spent in the last quarter,
+ * because a gradient that fades from the centre reads as a faint smudge. */
+function softBlob(c, cx, cy, rx, ry, color, a, rnd, o) {
+  o = o || {};
+  const R = Math.max(rx, ry);
+  const g = c.createRadialGradient(cx, cy, R * (o.core || 0.05), cx, cy, R);
+  g.addColorStop(0, hexA(color, a));
+  g.addColorStop(0.58, hexA(color, a * 0.93));
+  g.addColorStop(0.80, hexA(color, a * 0.58));
+  g.addColorStop(0.93, hexA(color, a * 0.20));
+  g.addColorStop(1, hexA(color, 0));
+  c.save();
+  blobPath(c, cx, cy, rx, ry, o.pts || 9, o.wob == null ? 0.24 : o.wob, rnd, o.rot || rnd() * 6.283);
+  c.fillStyle = g;
+  c.fill();
+  c.restore();
+}
+
+/* A wandering horizontal edge, kept as data so the same curve can be both
+ * filled and stroked — a band with a drawn top edge reads as a band, while
+ * a bare gradient reads as nothing at all. */
+function waveEdge(w, y0, amp, rnd, seg) {
+  seg = seg || 3;
+  const segs = [];
+  let x = 0, y = y0;
+  for (let i = 0; i < seg; i++) {
+    const nx = (i + 1) / seg * w;
+    const ny = y0 + (rnd() * 2 - 1) * amp;
+    const cp = x + (nx - x) / 2;
+    segs.push([cp, y + (rnd() * 2 - 1) * amp * 0.8, cp, ny + (rnd() * 2 - 1) * amp * 0.8, nx, ny]);
+    x = nx; y = ny;
+  }
+  return { y0: y0, segs: segs };
+}
+
+function traceWave(c, e) {
+  c.moveTo(0, e.y0);
+  for (let i = 0; i < e.segs.length; i++) {
+    const s = e.segs[i];
+    c.bezierCurveTo(s[0], s[1], s[2], s[3], s[4], s[5]);
+  }
+}
+
+function fillWave(c, w, e, depth, color, a, up) {
+  const dir = up ? -1 : 1;
+  c.save();
+  c.beginPath();
+  traceWave(c, e);
+  c.lineTo(w, e.y0 + dir * depth);
+  c.lineTo(0, e.y0 + dir * depth);
+  c.closePath();
+  const g = c.createLinearGradient(0, e.y0, 0, e.y0 + dir * depth);
+  g.addColorStop(0, hexA(color, a));
+  g.addColorStop(0.42, hexA(color, a * 0.82));
+  g.addColorStop(1, hexA(color, a * 0.08));
+  c.fillStyle = g;
+  c.fill();
+  c.restore();
+}
+
+function strokeWave(c, e, color, a, wid) {
+  c.save();
+  c.beginPath();
+  traceWave(c, e);
+  c.strokeStyle = hexA(color, a);
+  c.lineWidth = wid;
+  c.stroke();
+  c.restore();
+}
+
+/* a long meandering stroke that thins and fades along its length */
+function vein(c, x0, y0, x1, y1, wid, color, a, rnd) {
+  c.save();
+  c.beginPath();
+  c.moveTo(x0, y0);
+  const dx = x1 - x0, dy = y1 - y0;
+  c.bezierCurveTo(
+    x0 + dx * 0.3 + (rnd() * 2 - 1) * 260, y0 + dy * 0.3 + (rnd() * 2 - 1) * 200,
+    x0 + dx * 0.7 + (rnd() * 2 - 1) * 260, y0 + dy * 0.7 + (rnd() * 2 - 1) * 200,
+    x1, y1);
+  const g = c.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, hexA(color, 0));
+  g.addColorStop(0.35, hexA(color, a));
+  g.addColorStop(0.7, hexA(color, a * 0.7));
+  g.addColorStop(1, hexA(color, 0));
+  c.strokeStyle = g;
+  c.lineWidth = wid;
+  c.lineCap = 'round';
+  c.stroke();
+  c.restore();
+}
+
+/* The board carries a portrait, a title, two columns of times and a plaque.
+ * Rather than time every pattern to tiptoe around that, each one paints
+ * boldly and then has the middle washed back to bare paper — which is
+ * exactly the composition the watercolour backgrounds used to have. */
+function clearCentre(c, w, h, P, strength) {
+  const g = c.createRadialGradient(w / 2, h * 0.48, 0, w / 2, h * 0.48, w * 0.66);
+  g.addColorStop(0, hexA(P.paper[0], strength));
+  g.addColorStop(0.45, hexA(P.paper[0], strength * 0.9));
+  g.addColorStop(0.75, hexA(P.paper[0], strength * 0.45));
+  g.addColorStop(1, hexA(P.paper[0], 0));
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+}
+
+/* ---------- patterns ----------
+ * Ten compositions that have to stay apart from one another at 150px in the
+ * gallery, in fourteen palettes, without ever fighting the text. */
+
+const PATTERNS = {
+  mist: {
+    label: 'ערפל', hint: 'עננים רכים', frame: 'double',
+    draw: function (c, w, h, P, rnd) {
+      [[0.04, 1.02, 0.58, 0.34, P.c1, 0.80],
+       [0.92, 0.96, 0.54, 0.36, P.c2, 0.76],
+       [0.58, 1.14, 0.52, 0.26, P.c1, 0.70],
+       [0.02, 0.02, 0.46, 0.30, P.c2, 0.66],
+       [1.02, 0.06, 0.44, 0.26, P.c1, 0.58],
+       [0.48, -0.12, 0.60, 0.22, P.c3, 0.52]
+      ].forEach(function (s) {
+        softBlob(c, s[0] * w, s[1] * h, s[2] * w, s[3] * h, s[4], s[5], rnd, { pts: 12, wob: 0.34 });
+      });
+      clearCentre(c, w, h, P, 0.82);
+    }
   },
-  olive: {
-    label: 'ענף זית', file: 'templates/olive.webp',
-    ink: '#2f4a33', gold: '#a08b3f', cream: '247,243,232', plaque: '#3c523f'
+
+  halo: {
+    label: 'הילה', hint: 'אור מן המרכז', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      const g = c.createRadialGradient(w / 2, h * 0.46, w * 0.20, w / 2, h * 0.46, w * 0.80);
+      g.addColorStop(0, hexA(P.c1, 0));
+      g.addColorStop(0.40, hexA(P.c1, 0.30));
+      g.addColorStop(0.70, hexA(P.c1, 0.78));
+      g.addColorStop(1, hexA(P.deep || P.c1, 0.95));
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      const core = c.createRadialGradient(w / 2, h * 0.44, 0, w / 2, h * 0.44, w * 0.44);
+      core.addColorStop(0, hexA(P.glow, 0.95));
+      core.addColorStop(0.55, hexA(P.glow, 0.55));
+      core.addColorStop(1, hexA(P.glow, 0));
+      c.fillStyle = core;
+      c.fillRect(0, 0, w, h);
+      clearCentre(c, w, h, P, 0.55);
+    }
   },
-  jerusalem: {
-    label: 'ירושלים', file: 'templates/jerusalem.webp',
-    ink: '#5a4326', gold: '#b08d4f', cream: '245,237,221', plaque: '#5a4326'
+
+  bloom: {
+    label: 'פריחה', hint: 'עלי כותרת', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      [[0.08, 1.00, 0.26, 0.24, P.c1, 0.88],
+       [0.34, 1.10, 0.26, 0.24, P.c2, 0.80],
+       [0.62, 1.04, 0.25, 0.23, P.c1, 0.84],
+       [0.92, 1.08, 0.27, 0.24, P.c3, 0.76],
+       [1.03, 0.66, 0.19, 0.19, P.c2, 0.62],
+       [-0.03, 0.70, 0.19, 0.19, P.c2, 0.58],
+       [0.94, 0.04, 0.26, 0.20, P.c1, 0.70],
+       [0.04, 0.02, 0.24, 0.19, P.c3, 0.62]
+      ].forEach(function (s) {
+        softBlob(c, s[0] * w, s[1] * h, s[2] * w, s[3] * h, s[4], s[5], rnd, { pts: 11, wob: 0.34 });
+      });
+      clearCentre(c, w, h, P, 0.84);
+    }
   },
-  night: {
-    label: 'שמי לילה', file: 'templates/night.webp',
-    ink: '#17203d', gold: '#b98a44', cream: '243,239,229', plaque: '#1f2a4a',
-    /* the title zone sits on the dark night sky, so it needs light ink */
-    titleInk: '#f2e9c9', titleShadow: 'rgba(10,16,38,0.55)'
+
+  waves: {
+    label: 'גלים', hint: 'פסים זורמים', frame: 'double',
+    draw: function (c, w, h, P, rnd) {
+      const cols = [P.c2, P.c1, P.c3, P.c1];
+      [0.70, 0.79, 0.88, 0.96].forEach(function (t, i) {
+        const e = waveEdge(w, h * t, h * 0.042, rnd);
+        fillWave(c, w, e, h * 0.34, cols[i], 0.72);
+        strokeWave(c, e, P.gold, 0.30, 2.5);
+      });
+      [0.20, 0.11].forEach(function (t, i) {
+        const e = waveEdge(w, h * t, h * 0.034, rnd);
+        fillWave(c, w, e, h * 0.22, i ? P.c1 : P.c2, 0.58, true);
+        strokeWave(c, e, P.gold, 0.22, 2);
+      });
+      clearCentre(c, w, h, P, 0.62);
+    }
   },
-  field: {
-    label: 'שדה זהב', file: 'templates/field.webp',
-    ink: '#5a4423', gold: '#a8843c', cream: '246,239,222', plaque: '#5f4d28'
+
+  dunes: {
+    label: 'חולות', hint: 'גבעות ושמש', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      const sun = c.createRadialGradient(w * 0.5, h * 0.20, 0, w * 0.5, h * 0.20, w * 0.46);
+      sun.addColorStop(0, hexA(P.glow, 0.95));
+      sun.addColorStop(0.30, hexA(P.c3, 0.55));
+      sun.addColorStop(1, hexA(P.c3, 0));
+      c.fillStyle = sun;
+      c.fillRect(0, 0, w, h);
+      /* a visible disc, so the design is unmistakably a landscape */
+      const disc = c.createRadialGradient(w * 0.5, h * 0.20, w * 0.055, w * 0.5, h * 0.20, w * 0.135);
+      disc.addColorStop(0, hexA(P.glow, 0.92));
+      disc.addColorStop(0.62, hexA(P.glow, 0.62));
+      disc.addColorStop(1, hexA(P.glow, 0));
+      c.fillStyle = disc;
+      c.fillRect(0, 0, w, h);
+      const hills = [[0.66, P.c2, 0.60], [0.80, P.c1, 0.78], [0.93, P.c3, 0.86]];
+      hills.forEach(function (s) {
+        const e = waveEdge(w, h * s[0], h * 0.075, rnd, 2);
+        fillWave(c, w, e, h * 0.40, s[1], s[2]);
+        strokeWave(c, e, P.gold, 0.22, 2);
+      });
+      clearCentre(c, w, h, P, 0.60);
+    }
   },
-  galilee: {
-    label: 'הגליל', file: 'templates/galilee.webp',
-    ink: '#2e4a3a', gold: '#8f9a55', cream: '244,243,232', plaque: '#3a5244'
+
+  strata: {
+    label: 'שכבות', hint: 'רבדים אופקיים', frame: 'double',
+    draw: function (c, w, h, P, rnd) {
+      const cols = [P.c1, P.c2, P.c3, P.c1, P.c2, P.c3, P.c1];
+      for (let i = 0; i < 7; i++) {
+        const e = waveEdge(w, h * (0.04 + i * 0.145), h * 0.014, rnd, 2);
+        fillWave(c, w, e, h * 0.075, cols[i], 0.72);
+        strokeWave(c, e, P.gold, 0.24, 1.6);
+      }
+      clearCentre(c, w, h, P, 0.80);
+    }
   },
-  tchelet: {
-    label: 'תכלת', file: 'templates/tchelet.webp',
-    ink: '#28486b', gold: '#8aa3c0', cream: '240,244,248', plaque: '#31517a'
+
+  aurora: {
+    label: 'זוהר', hint: 'סרטי אור אלכסוניים', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      c.save();
+      c.translate(w / 2, h / 2);
+      c.rotate(-0.52);
+      c.translate(-w / 2, -h / 2);
+      const cols = [P.c1, P.c2, P.c3, P.c1, P.c2, P.c3];
+      let y = -0.06;
+      for (let i = 0; i < 6; i++) {
+        const thick = 0.026 + rnd() * 0.042;
+        softBlob(c, w * (0.5 + (rnd() - 0.5) * 0.12), h * y, w * 0.95, h * thick,
+          cols[i], 0.62 + rnd() * 0.24, rnd, { pts: 13, wob: 0.30, rot: 0 });
+        y += thick * 2 + 0.055 + rnd() * 0.075;
+      }
+      c.restore();
+      clearCentre(c, w, h, P, 0.80);
+    }
   },
-  /* --- Shabbat-themed --- */
-  candles: {
-    label: 'נרות שבת', file: 'templates/candles.webp', shabbat: true,
-    ink: '#4a3b25', gold: '#b08d4f', cream: '250,245,230', plaque: '#4a3f2a'
+
+  veins: {
+    label: 'שיש', hint: 'עורקי אבן', frame: 'double',
+    draw: function (c, w, h, P, rnd) {
+      const g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, hexA(P.c2, 0.62));
+      g.addColorStop(0.5, hexA(P.c1, 0.34));
+      g.addColorStop(1, hexA(P.c2, 0.66));
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      softBlob(c, w * 0.04, h * 0.06, w * 0.34, h * 0.24, P.c1, 0.62, rnd, { pts: 9, wob: 0.3 });
+      softBlob(c, w * 0.97, h * 0.96, w * 0.34, h * 0.24, P.c1, 0.62, rnd, { pts: 9, wob: 0.3 });
+      for (let i = 0; i < 11; i++) {
+        const t = i / 10;
+        const col = i % 3 === 1 ? P.gold : (P.deep || P.c1);
+        vein(c, -60, h * (-0.10 + t * 0.42), w + 60, h * (0.56 + t * 0.52),
+          3 + rnd() * 9, col, 0.52 + rnd() * 0.26, rnd);
+        /* a hairline riding the same course gives the vein a crystalline edge */
+        vein(c, -60, h * (-0.09 + t * 0.42), w + 60, h * (0.57 + t * 0.52),
+          1.2, P.glow, 0.30, rnd);
+      }
+      clearCentre(c, w, h, P, 0.60);
+    }
   },
-  challah: {
-    label: 'חלות וקידוש', file: 'templates/challah.webp', shabbat: true,
-    ink: '#5a2a33', gold: '#a8853f', cream: '250,247,238', plaque: '#5e2f38'
+
+  orbit: {
+    label: 'מעגלים', hint: 'טבעות רכות', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      const cx = w / 2, cy = h * 1.02;
+      const cols = [P.c1, P.c2, P.c3, P.c1, P.c2, P.c3];
+      for (let i = 6; i >= 1; i--) {
+        const r = w * (0.18 + i * 0.145);
+        c.save();
+        blobPath(c, cx, cy, r, r * 0.94, 14, 0.035, mulberry32(i * 977), i * 0.7);
+        const g = c.createRadialGradient(cx, cy, r * 0.78, cx, cy, r);
+        g.addColorStop(0, hexA(cols[i - 1], 0));
+        g.addColorStop(0.60, hexA(cols[i - 1], 0.34));
+        g.addColorStop(0.92, hexA(cols[i - 1], 0.72));
+        g.addColorStop(1, hexA(P.gold, 0.42));
+        c.fillStyle = g;
+        c.fill();
+        c.restore();
+      }
+      clearCentre(c, w, h, P, 0.66);
+    }
   },
-  'shabbat-table': {
-    label: 'שולחן שבת', file: 'templates/shabbat-table.webp', shabbat: true,
-    ink: '#3a3f4a', gold: '#a3947a', cream: '248,248,246', plaque: '#474d59'
-  },
-  havdala: {
-    label: 'הבדלה', file: 'templates/havdala.webp', shabbat: true,
-    ink: '#3a3550', gold: '#9a8fa8', cream: '245,242,234', plaque: '#3f3a5c',
-    titleInk: '#f2eee4', titleShadow: 'rgba(30,24,55,0.5)'
-  },
-  pomegranate: {
-    label: 'רימונים', file: 'templates/pomegranate.webp', shabbat: true,
-    ink: '#5c232c', gold: '#b08d3f', cream: '249,246,236', plaque: '#5c232c'
+
+  arch: {
+    label: 'קשת', hint: 'קשת בית כנסת', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      /* deep surround first, then the arch is cut back out of it in light */
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, hexA(P.c1, 0.80));
+      g.addColorStop(0.5, hexA(P.c2, 0.62));
+      g.addColorStop(1, hexA(P.c1, 0.86));
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+
+      const x0 = w * 0.105, x1 = w * 0.895, top = h * 0.055, spring = h * 0.42;
+      c.save();
+      c.beginPath();
+      c.moveTo(x0, h * 1.02);
+      c.lineTo(x0, spring);
+      c.bezierCurveTo(x0, top, x1, top, x1, spring);
+      c.lineTo(x1, h * 1.02);
+      c.closePath();
+      c.clip();
+      paintPaper(c, w, h, P);
+      const inner = c.createRadialGradient(w / 2, h * 0.30, 0, w / 2, h * 0.42, w * 0.62);
+      inner.addColorStop(0, hexA(P.glow, 0.70));
+      inner.addColorStop(1, hexA(P.glow, 0));
+      c.fillStyle = inner;
+      c.fillRect(0, 0, w, h);
+      c.restore();
+
+      /* the arch mouldings */
+      c.save();
+      c.beginPath();
+      c.moveTo(x0, h);
+      c.lineTo(x0, spring);
+      c.bezierCurveTo(x0, top, x1, top, x1, spring);
+      c.lineTo(x1, h);
+      c.strokeStyle = hexA(P.gold, 0.72);
+      c.lineWidth = Math.max(2, w * 0.0032);
+      c.stroke();
+      const p = w * 0.018;
+      c.beginPath();
+      c.moveTo(x0 + p, h);
+      c.lineTo(x0 + p, spring + p);
+      c.bezierCurveTo(x0 + p, top + p * 1.8, x1 - p, top + p * 1.8, x1 - p, spring + p);
+      c.lineTo(x1 - p, h);
+      c.strokeStyle = hexA(P.gold, 0.34);
+      c.lineWidth = Math.max(1, w * 0.0014);
+      c.stroke();
+      c.restore();
+    }
   }
 };
 
-/* Tone variations — a real extra axis of choice without a server: the
- * template art is redrawn through a canvas filter before anything else is
- * painted, so the adaptive lozenges measure the tinted result, not the
- * original. */
-const TONES = {
-  natural: { label: 'טבעי',  filter: '' },
-  warm:    { label: 'חמים',  filter: 'sepia(0.32) saturate(1.12)' },
-  soft:    { label: 'רך',    filter: 'saturate(0.55) brightness(1.05)' },
-  deep:    { label: 'עמוק',  filter: 'saturate(1.3) contrast(1.08)' }
+/* ---------- palettes ----------
+ * `cream` is the tone the readability lozenges fade toward, so it must be
+ * the paper itself; `ink` is what stays legible on that paper. The two dark
+ * palettes swap those two roles, and every other piece of drawing code
+ * follows along without a special case. c1/c2 are the two masses the
+ * patterns are built from, c3 is the accent, `deep` the darkest note. */
+
+const PALETTES = {
+  navy:     { label: 'כחול קלאסי', sw: ['#5c7ab0', '#1e2d55'],
+              paper: ['#fdf9f0', '#f3ecdb'], c1: '#6d8ab9', c2: '#a2b8d6', c3: '#d6b979', deep: '#3b527f', glow: '#fffdf4',
+              ink: '#1e2d55', gold: '#b98a44', cream: '250,246,236', plaque: '#26355f' },
+  olive:    { label: 'ירוק זית', sw: ['#8ca063', '#38502f'],
+              paper: ['#fbf9ee', '#f0f0dc'], c1: '#93a86e', c2: '#bfcb9c', c3: '#cdaf5f', deep: '#5b7042', glow: '#fdfcf0',
+              ink: '#31492f', gold: '#a08b3f', cream: '249,249,238', plaque: '#3a533a' },
+  stone:    { label: 'אבן ירושלים', sw: ['#c9a163', '#7a5c35'],
+              paper: ['#fdf9ee', '#f5e9d2'], c1: '#c9a367', c2: '#e2c9a0', c3: '#a67f47', deep: '#8a6739', glow: '#fffcf0',
+              ink: '#5a4326', gold: '#b08d4f', cream: '251,245,231', plaque: '#5f4728' },
+  amber:    { label: 'שדה זהב', sw: ['#e0ac4c', '#8a6321'],
+              paper: ['#fefaea', '#f8edc9'], c1: '#e3b962', c2: '#f2dda2', c3: '#c08f39', deep: '#96702c', glow: '#fffdee',
+              ink: '#5a4423', gold: '#a8843c', cream: '253,247,229', plaque: '#5f4d28' },
+  sage:     { label: 'מרווה', sw: ['#87a894', '#42604e'],
+              paper: ['#fafcf7', '#ecf1e8'], c1: '#8dae9a', c2: '#bcd3c1', c3: '#c2c67c', deep: '#5b7d68', glow: '#fdfefa',
+              ink: '#2e4a3a', gold: '#7f9060', cream: '248,251,246', plaque: '#3a5244' },
+  tchelet:  { label: 'תכלת', sw: ['#5fa5cb', '#2b5c86'],
+              paper: ['#f8fcfe', '#e6f1f8'], c1: '#6fadd0', c2: '#a9cfe5', c3: '#8fb0cd', deep: '#3d7ba6', glow: '#fdffff',
+              ink: '#28486b', gold: '#6f93b6', cream: '244,250,253', plaque: '#31517a' },
+  wine:     { label: 'יין ורימון', sw: ['#b0616c', '#6d2029'],
+              paper: ['#fefaf6', '#f7ebe4'], c1: '#b96f77', c2: '#dcaaa4', c3: '#c79a4e', deep: '#8a3a44', glow: '#fffdfa',
+              ink: '#5c232c', gold: '#b08d3f', cream: '253,248,242', plaque: '#5f2830' },
+  rose:     { label: 'ורד עתיק', sw: ['#d09a97', '#8a5a5c'],
+              paper: ['#fefaf8', '#f8ece9'], c1: '#d3a09c', c2: '#ecc9c2', c3: '#c6a37e', deep: '#9c6a68', glow: '#fffdfc',
+              ink: '#6b4046', gold: '#ab7f6a', cream: '254,249,246', plaque: '#6d454b' },
+  plum:     { label: 'סגול עמוק', sw: ['#8f7cb4', '#4a3a70'],
+              paper: ['#fcf9fd', '#efe9f5'], c1: '#9784bd', c2: '#c4b6da', c3: '#ab93bd', deep: '#63528d', glow: '#fefcff',
+              ink: '#3a3550', gold: '#8e82a8', cream: '250,247,252', plaque: '#403a5e' },
+  forest:   { label: 'יער', sw: ['#5f8a70', '#22412f'],
+              paper: ['#f8fbf8', '#e6efe7'], c1: '#69906f', c2: '#a3c1a8', c3: '#a7ac5f', deep: '#3c6248', glow: '#fbfefb',
+              ink: '#23412f', gold: '#7e8f52', cream: '245,250,246', plaque: '#2b4c37' },
+  slate:    { label: 'אפור-כחול', sw: ['#8896a8', '#3d4a5c'],
+              paper: ['#fbfcfd', '#eaeef2'], c1: '#8f9dad', c2: '#bfc9d4', c3: '#ab9f8b', deep: '#5b6a7c', glow: '#fdfeff',
+              ink: '#33404f', gold: '#8e9099', cream: '248,250,252', plaque: '#3c4a5c' },
+  sand:     { label: 'חול ולבן', sw: ['#cbb794', '#8b7a5f'],
+              paper: ['#fefcf7', '#f4eee1'], c1: '#cfbc9c', c2: '#e7dcc6', c3: '#ad9a76', deep: '#8f7d5d', glow: '#fffefa',
+              ink: '#524634', gold: '#a08f6b', cream: '253,251,245', plaque: '#584c39' },
+  /* the two dark palettes: paper and ink swap roles */
+  midnight: { label: 'ליל חצות', dark: true, sw: ['#3a5390', '#0b1024'],
+              paper: ['#141d40', '#0a0f24'], c1: '#2d4a8c', c2: '#1d2f5e', c3: '#6d80bd', deep: '#060a18', glow: '#7d92d2',
+              ink: '#f4ebd0', gold: '#dcbc72', cream: '17,23,48', plaque: '#0b1226' },
+  charcoal: { label: 'פחם וזהב', dark: true, sw: ['#5a5449', '#171512'],
+              paper: ['#242118', '#141210'], c1: '#453f33', c2: '#2d2924', c3: '#8a7448', deep: '#0d0c0a', glow: '#a98d52',
+              ink: '#f2e9d4', gold: '#cca960', cream: '26,24,20', plaque: '#191713' }
 };
+
+const PATTERN_KEYS = Object.keys(PATTERNS);
+const PALETTE_KEYS = Object.keys(PALETTES);
+
+function patternOf(key) { return PATTERNS[key] || PATTERNS.mist; }
+function paletteOf(key) { return PALETTES[key] || PALETTES.navy; }
+
+/* ---------- painting ---------- */
+
+/* paper base — a broad diagonal wash, never a flat fill */
+function paintPaper(c, w, h, P) {
+  const g = c.createLinearGradient(0, 0, w * 0.35, h);
+  g.addColorStop(0, P.paper[0]);
+  g.addColorStop(1, P.paper[1]);
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+}
+
+/* a whisper of tooth, so large gradients do not band on cheap screens */
+let grainTile = null;
+function grain(c, w, h, dark) {
+  if (!grainTile) {
+    const t = document.createElement('canvas');
+    t.width = t.height = 96;
+    const tx = t.getContext('2d');
+    const d = tx.createImageData(96, 96);
+    const r = mulberry32(20260831);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const v = 128 + (r() * 2 - 1) * 127;
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
+      d.data[i + 3] = 255;
+    }
+    tx.putImageData(d, 0, 0);
+    grainTile = t;
+  }
+  c.save();
+  c.globalCompositeOperation = 'overlay';
+  c.globalAlpha = dark ? 0.03 : 0.05;
+  c.fillStyle = c.createPattern(grainTile, 'repeat');
+  c.fillRect(0, 0, w, h);
+  c.restore();
+}
+
+/* A rim shade, not a grey wash: tinting with the palette's own deep note
+ * keeps the paper warm, where neutral ink turned every light design dusty. */
+function vignette(c, w, h, P) {
+  const g = c.createRadialGradient(w / 2, h / 2, w * 0.52, w / 2, h / 2, w * 0.86);
+  const col = P.deep || P.ink;
+  g.addColorStop(0, hexA(col, 0));
+  g.addColorStop(1, hexA(col, P.dark ? 0.34 : 0.09));
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+}
+
+function diamondOn(c, x, y, r, color) {
+  c.beginPath();
+  c.moveTo(x, y - r); c.lineTo(x + r, y);
+  c.lineTo(x, y + r); c.lineTo(x - r, y);
+  c.closePath();
+  c.fillStyle = color;
+  c.fill();
+}
+
+function drawFrame(c, w, h, P, style) {
+  if (style === 'none') return;
+  const m = w * 0.035;
+  c.save();
+  c.strokeStyle = hexA(P.gold, 0.72);
+  c.lineWidth = Math.max(1.5, w * 0.0028);
+  c.strokeRect(m, m, w - m * 2, h - m * 2);
+  if (style === 'double') {
+    const m2 = m + w * 0.012;
+    c.strokeStyle = hexA(P.gold, 0.30);
+    c.lineWidth = Math.max(1, w * 0.0011);
+    c.strokeRect(m2, m2, w - m2 * 2, h - m2 * 2);
+    const r = w * 0.007;
+    [[m, m], [w - m, m], [m, h - m], [w - m, h - m]].forEach(function (p) {
+      diamondOn(c, p[0], p[1], r, hexA(P.gold, 0.7));
+    });
+    [[w / 2, m], [w / 2, h - m]].forEach(function (p) {
+      diamondOn(c, p[0], p[1], r * 0.8, hexA(P.gold, 0.55));
+    });
+  }
+  c.restore();
+}
+
+function hashKey(s) {
+  let n = 2166136261;
+  for (let i = 0; i < s.length; i++) { n ^= s.charCodeAt(i); n = Math.imul(n, 16777619); }
+  return n >>> 0;
+}
+
+/* Renders one design at any size. The pattern draws in board coordinates and
+ * the context is scaled, so a 220px gallery tile and the 1254px export come
+ * out of exactly the same code. */
+function paintDesign(c, size, patternKey, paletteKey) {
+  const pat = patternOf(patternKey), P = paletteOf(paletteKey);
+  c.save();
+  c.scale(size / W, size / H);
+  paintPaper(c, W, H, P);
+  pat.draw(c, W, H, P, mulberry32(hashKey(patternKey) ^ 0x5f3a));
+  vignette(c, W, H, P);
+  grain(c, W, H, P.dark);
+  drawFrame(c, W, H, P, pat.frame);
+  c.restore();
+}
+
+/* one-entry cache: the board is redrawn every week with the same design */
+let bgCache = { key: '', canvas: null };
+function boardBackground() {
+  const key = designKey() + '|' + paletteKeyOf();
+  if (bgCache.key === key && bgCache.canvas) return bgCache.canvas;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  paintDesign(cv.getContext('2d'), W, designKey(), paletteKeyOf());
+  bgCache = { key: key, canvas: cv };
+  return cv;
+}
+
+function designKey() { return (settings && PATTERNS[settings.template]) ? settings.template : 'mist'; }
+function paletteKeyOf() { return (settings && PALETTES[settings.palette]) ? settings.palette : 'navy'; }
 
 /* ---------- font pairs ----------
  * Each pair names a title face and a body face WITH the weight the file
@@ -156,14 +650,22 @@ function sB(base) { return Math.round(base * fontPair().body.scale); }
 /* ---------- state ---------- */
 
 let settings = null;
-let bgImage = null;      // loaded template image
-let bgFile = '';         // which template file bgImage holds
 let photoImage = null;   // loaded user photo
 let lastFilename = 'zmanei-shabbat.png';
 
 const $ = id => document.getElementById(id);
-const canvas = $('board');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
+let canvas = $('board');
+let ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+/* Point the whole drawing pipeline at another canvas for the duration of one
+ * render. The intro page needs a real example board, and re-implementing the
+ * board for it would guarantee the example drifts from the product. */
+function renderTo(target, fn) {
+  const pc = canvas, px = ctx;
+  canvas = target;
+  ctx = target.getContext('2d', { willReadFrequently: true });
+  try { fn(); } finally { canvas = pc; ctx = px; }
+}
 
 const canShareFiles = !!(navigator.canShare &&
   navigator.canShare({ files: [new File([''], 'a.png', { type: 'image/png' })] }));
@@ -175,14 +677,43 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw);
-    if (!s || !s.name || !s.cities || !s.cities.length || !TEMPLATES[s.template]) return null;
-    // back-compat with v1 settings
-    if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
-    if (!Array.isArray(s.customCities)) s.customCities = [];
-    if (!s.photoZoom) s.photoZoom = 100;
-    if (!TONES[s.tone]) s.tone = 'natural';
-    return s;
+    if (!s || !s.name || !s.cities || !s.cities.length) return null;
+    return migrateSettings(s);
   } catch (e) { return null; }
+}
+
+/* v1/v2 saved a picture filename in `template` and a CSS filter in `tone`.
+ * v3 designs are a pattern plus a palette, so an old board is mapped onto the
+ * closest new pair — a family that set this up months ago opens the tool and
+ * finds their board, not a wizard. */
+const LEGACY_DESIGNS = {
+  classic:         ['mist',   'navy'],
+  olive:           ['bloom',  'olive'],
+  jerusalem:       ['arch',   'stone'],
+  night:           ['halo',   'midnight'],
+  field:           ['dunes',  'amber'],
+  galilee:         ['waves',  'sage'],
+  tchelet:         ['aurora', 'tchelet'],
+  candles:         ['halo',   'amber'],
+  challah:         ['bloom',  'wine'],
+  'shabbat-table': ['strata', 'slate'],
+  havdala:         ['aurora', 'plum'],
+  pomegranate:     ['orbit',  'wine']
+};
+
+function migrateSettings(s) {
+  if (!PATTERNS[s.template]) {
+    const m = LEGACY_DESIGNS[s.template] || ['mist', 'navy'];
+    s.template = m[0];
+    if (!PALETTES[s.palette]) s.palette = m[1];
+  }
+  if (!PALETTES[s.palette]) s.palette = 'navy';
+  delete s.tone;                        // the CSS-filter axis is gone
+  if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
+  if (!Array.isArray(s.customCities)) s.customCities = [];
+  if (!s.photoZoom) s.photoZoom = 100;
+  s.v = 3;
+  return s;
 }
 
 function saveSettings(s) {
@@ -364,7 +895,7 @@ const LABELS = {
 
 /* ---------- drawing ---------- */
 
-function tpl() { return TEMPLATES[settings.template] || TEMPLATES.classic; }
+function tpl() { return paletteOf(settings && settings.palette); }
 
 function diamond(x, y, r, color) {
   ctx.beginPath();
@@ -383,10 +914,15 @@ function drawTitle(title, subtitle) {
   ctx.direction = 'rtl';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = T.titleInk || T.ink;
+  /* The title sits wherever the design happens to be light or dark, so its
+   * ink is measured off the art that was just painted rather than declared
+   * per design — 140 combinations is too many to hand-tune. */
+  const lum = meanLum(200, 90, W - 400, 170);
+  const lightInk = lum < 128;
+  ctx.fillStyle = lightInk ? (T.dark ? T.ink : '#fdf8ea') : (T.dark ? '#20263f' : T.ink);
   const size = fitFont(title, wTitle(), fTitle(), sT(S_TITLE), W - 200);
   ctx.font = wTitle() + ' ' + size + 'px ' + fTitle();
-  ctx.shadowColor = T.titleShadow || 'rgba(0,0,0,0.15)';
+  ctx.shadowColor = lightInk ? 'rgba(8,12,28,0.55)' : 'rgba(0,0,0,0.15)';
   ctx.shadowBlur = 6;
   ctx.shadowOffsetY = 3;
   ctx.fillText(title, W / 2, 158);
@@ -412,7 +948,7 @@ function drawTitle(title, subtitle) {
   ctx.restore();
 }
 
-// Column headers are always drawn by code (the templates are text-free).
+// Column headers are always drawn by code (the backgrounds carry no text).
 function drawHeaders(rightLabel, leftLabel) {
   const T = tpl();
   ctx.save();
@@ -619,6 +1155,20 @@ function sliceLum(x, y, w, h, slices) {
   return out;
 }
 
+/* mean luminance of a region of whatever is already on the canvas */
+function meanLum(x, y, w, h) {
+  x = Math.max(0, Math.round(x)); y = Math.max(0, Math.round(y));
+  w = Math.min(W - x, Math.round(w)); h = Math.min(H - y, Math.round(h));
+  if (w <= 0 || h <= 0) return 255;
+  const d = ctx.getImageData(x, y, w, h).data;
+  let sum = 0, n = 0;
+  for (let i = 0; i < d.length; i += 16) {
+    sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    n++;
+  }
+  return n ? sum / n : 255;
+}
+
 function lumToAlpha(lum) {
   const t = Math.max(0, Math.min(1, (232 - lum) / 112));
   return 0.15 + t * 0.82;
@@ -723,22 +1273,6 @@ function drawRows(rows) {
   ctx.restore();
 }
 
-/* the template art with the chosen tone baked in (cached per template+tone) */
-let toneCache = { key: '', canvas: null };
-function tonedBg() {
-  const tone = TONES[settings.tone] ? settings.tone : 'natural';
-  if (tone === 'natural' || !BLUR_OK) return bgImage;   // BLUR_OK == ctx.filter works
-  const key = bgFile + '|' + tone;
-  if (toneCache.key === key && toneCache.canvas) return toneCache.canvas;
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const x = c.getContext('2d');
-  x.filter = TONES[tone].filter;
-  x.drawImage(bgImage, 0, 0, W, H);
-  toneCache = { key, canvas: c };
-  return c;
-}
-
 const CONTACT_EMAIL = 'idoyan@gmail.com';
 
 /* Discreet credit in the bottom-left corner, outside the plaque, so anyone
@@ -748,9 +1282,10 @@ function drawContact() {
   ctx.direction = 'ltr';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
+  const T = tpl();
   ctx.font = '400 19px FrankRuhl, serif';
-  ctx.fillStyle = 'rgba(0,0,0,0.34)';
-  ctx.shadowColor = 'rgba(255,255,255,0.6)';
+  ctx.fillStyle = T.dark ? 'rgba(255,250,235,0.40)' : 'rgba(0,0,0,0.34)';
+  ctx.shadowColor = T.dark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)';
   ctx.shadowBlur = 4;
   ctx.fillText(CONTACT_EMAIL, 42, 1228);
   ctx.restore();
@@ -759,7 +1294,7 @@ function drawContact() {
 function drawBoard(plan, rows) {
   const labels = LABELS[plan.mode];
   ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(tonedBg(), 0, 0, W, H);
+  ctx.drawImage(boardBackground(), 0, 0, W, H);
   drawPhoto();
   drawTitle(labels.title, plan.name);
   drawHeaders(labels.right, labels.left);
@@ -771,11 +1306,6 @@ function drawBoard(plan, rows) {
 /* ---------- assets ---------- */
 
 async function loadAssets() {
-  const T = tpl();
-  if (!bgImage || bgFile !== T.file) {
-    bgImage = await loadImage(T.file);
-    bgFile = T.file;
-  }
   if (settings.photo && (!photoImage || photoImage._src !== settings.photo)) {
     photoImage = await loadImage(settings.photo);
     photoImage._src = settings.photo;
@@ -879,6 +1409,94 @@ function share() {
   }, 'image/png');
 }
 
+/* ---------- intro screen ----------
+ * People were arriving here from a forwarded WhatsApp link with no idea what
+ * the tool is — one visitor uploaded a photo of themselves. So the first
+ * screen now shows a finished board before it asks for anything, and every
+ * line of copy says whose photo this is. */
+
+/* A portrait stand-in for the example. Deliberately a drawn silhouette and
+ * not a stock face: the example must read as "your photo goes here", and a
+ * real-looking stranger would read as "this is the person". */
+function silhouetteCanvas(P) {
+  const c = document.createElement('canvas');
+  c.width = 660; c.height = 790;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 790);
+  g.addColorStop(0, hexA(P.c2, 0.55));
+  g.addColorStop(1, hexA(P.c1, 0.7));
+  x.fillStyle = g;
+  x.fillRect(0, 0, 660, 790);
+
+  x.fillStyle = hexA(P.dark ? '#e8e0cc' : P.ink, P.dark ? 0.35 : 0.34);
+  // shoulders
+  x.beginPath();
+  x.moveTo(70, 790);
+  x.bezierCurveTo(90, 560, 240, 470, 330, 470);
+  x.bezierCurveTo(420, 470, 570, 560, 590, 790);
+  x.closePath();
+  x.fill();
+  // head
+  x.beginPath();
+  x.ellipse(330, 320, 138, 162, 0, 0, Math.PI * 2);
+  x.fill();
+
+  // a soft light so the silhouette does not read as a flat sticker
+  const hl = x.createRadialGradient(270, 250, 10, 330, 330, 260);
+  hl.addColorStop(0, 'rgba(255,255,255,0.20)');
+  hl.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = hl;
+  x.fillRect(0, 0, 660, 790);
+  return c;
+}
+
+const SAMPLE_ROWS = [
+  { name: 'ירושלים', entry: '18:34', exit: '19:48' },
+  { name: 'תל אביב', entry: '18:52', exit: '19:50' },
+  { name: 'חיפה', entry: '18:42', exit: '19:52' },
+  { name: 'באר שבע', entry: '18:54', exit: '19:49' },
+  { name: 'צפת', entry: '18:49', exit: '19:51' }
+];
+
+/* The example is drawn by the very same pipeline that draws the real board —
+ * an example maintained separately is an example that quietly goes stale. */
+function drawSampleBoard() {
+  const target = $('sampleBoard');
+  if (!target) return;
+  const saved = settings, savedPhoto = photoImage, savedCache = bgCache;
+  settings = defaultDraft();
+  settings.dedication = 'לזכר';
+  settings.name = 'שם יקירכם ז״ל';
+  settings.dateLine = 'תאריך הפטירה';
+  settings.verse = 'נר ה׳ נשמת אדם';
+  settings.template = 'mist';
+  settings.palette = 'navy';
+  settings.photoOffset = 18;
+  settings.photoZoom = 104;
+  photoImage = silhouetteCanvas(paletteOf('navy'));
+  bgCache = { key: '', canvas: null };
+  try {
+    renderTo(target, function () {
+      drawBoard({ mode: 'shabbat', name: 'פרשת בראשית' }, SAMPLE_ROWS);
+    });
+  } catch (e) {
+    console.warn('sample render failed', e);
+  } finally {
+    settings = saved;
+    photoImage = savedPhoto;
+    bgCache = savedCache;
+  }
+}
+
+function showIntro() {
+  $('screenIntro').style.display = 'block';
+  $('screenBoard').style.display = 'none';
+  $('wizard').style.display = 'none';
+  document.fonts.ready.then(drawSampleBoard).catch(drawSampleBoard);
+}
+
+function hideIntro() { $('screenIntro').style.display = 'none'; }
+
 /* ---------- wizard ---------- */
 
 const wizardState = { step: 0, draft: null };
@@ -886,7 +1504,7 @@ const WSTEPS = 6;
 
 function defaultDraft() {
   return {
-    v: 2,
+    v: 3,
     photo: '',
     photoOffset: 25,
     photoZoom: 100,
@@ -896,8 +1514,8 @@ function defaultDraft() {
     verse: '',
     cities: ['jerusalem', 'telaviv', 'haifa', 'beersheva'],
     customCities: [],
-    template: 'classic',
-    tone: 'natural',
+    template: 'mist',
+    palette: 'navy',
     fontPair: 'classic'
   };
 }
@@ -911,6 +1529,7 @@ function allCities(src) {
 function openWizard(prefill) {
   wizardState.step = 0;
   wizardState.draft = prefill ? JSON.parse(JSON.stringify(prefill)) : defaultDraft();
+  hideIntro();
   $('screenBoard').style.display = 'none';
   $('wizard').style.display = 'block';
   $('wizCancel').style.display = prefill ? 'inline-block' : 'none';
@@ -922,8 +1541,10 @@ function openWizard(prefill) {
 }
 
 function closeWizardToBoard() {
+  hideIntro();
   $('wizard').style.display = 'none';
   $('screenBoard').style.display = 'flex';
+  window.scrollTo(0, 0);
 }
 
 function fillWizardFields() {
@@ -971,72 +1592,10 @@ function fillWizardFields() {
   $('cityResults').innerHTML = '';
   $('citySearch').value = '';
 
-  // templates, grouped — twelve tiles in one undifferentiated wall is hard to scan
-  const tg = $('tplGrid');
-  tg.innerHTML = '';
-  const groups = [
-    ['שבת ומועד', Object.entries(TEMPLATES).filter(([, t]) => t.shabbat)],
-    ['נוף וטבע', Object.entries(TEMPLATES).filter(([, t]) => !t.shabbat)]
-  ];
-  groups.forEach(([groupName, entries]) => {
-    if (!entries.length) return;
-    const head = document.createElement('div');
-    head.className = 'tplgroup';
-    head.textContent = groupName;
-    tg.appendChild(head);
-    entries.forEach(([key, t]) => renderTplTile(key, t, tg, d));
-  });
-
-  function renderTplTile(key, t, tg, d) {
-    const label = document.createElement('label');
-    const rb = document.createElement('input');
-    rb.type = 'radio';
-    rb.name = 'tplPick';
-    rb.value = key;
-    rb.checked = d.template === key;
-    if (rb.checked) label.classList.add('checked');
-    rb.addEventListener('change', () => {
-      tg.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
-      label.classList.add('checked');
-    });
-    const img = document.createElement('img');
-    // 320px thumbnail, not the full 1254px art — the gallery shows twelve of
-    // these at once, and the full file is fetched only for the chosen one
-    img.src = t.file.replace('templates/', 'templates/thumb/');
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.alt = t.label;
-    const nm = document.createElement('div');
-    nm.className = 'tname';
-    nm.textContent = t.label;
-    label.appendChild(rb);
-    label.appendChild(img);
-    label.appendChild(nm);
-    tg.appendChild(label);
-  }
-
-  // tone variations
-  const tn = $('toneGrid');
-  tn.innerHTML = '';
-  Object.entries(TONES).forEach(([key, t]) => {
-    const label = document.createElement('label');
-    label.className = 'tonechip';
-    const rb = document.createElement('input');
-    rb.type = 'radio';
-    rb.name = 'tonePick';
-    rb.value = key;
-    rb.checked = (d.tone || 'natural') === key;
-    if (rb.checked) label.classList.add('checked');
-    rb.addEventListener('change', () => {
-      tn.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
-      label.classList.add('checked');
-      applyTonePreview(key);
-    });
-    label.appendChild(rb);
-    label.appendChild(document.createTextNode(t.label));
-    tn.appendChild(label);
-  });
-  applyTonePreview(d.tone || 'natural');
+  // design gallery — every tile is a live render of the real background at
+  // the currently chosen palette, so what is picked is exactly what prints
+  renderDesignGrid();
+  renderPaletteGrid();
 
   // font pairs
   const fg = $('fontGrid');
@@ -1073,20 +1632,86 @@ function fillWizardFields() {
     fg.appendChild(label);
   });
 
-  // progress dots
-  const pr = $('wizProgress');
-  pr.innerHTML = '';
-  for (let i = 0; i < WSTEPS; i++) {
-    const s = document.createElement('span');
-    pr.appendChild(s);
-  }
 }
 
-/* the tone applies to every thumbnail at once, so the grid always shows the
- * designs as they will actually be printed */
-function applyTonePreview(toneKey) {
-  const f = (TONES[toneKey] || TONES.natural).filter;
-  $('tplGrid').querySelectorAll('img').forEach(img => { img.style.filter = f; });
+/* ---------- design gallery ----------
+ * Tiles are canvases, not <img>: a design and a palette are independent, and
+ * repainting 10 small canvases when the palette changes is both cheaper and
+ * more honest than tinting a photograph with a CSS filter and hoping. */
+
+const TILE_PX = 260;
+
+function renderDesignGrid() {
+  const d = wizardState.draft;
+  const grid = $('tplGrid');
+  grid.innerHTML = '';
+  PATTERN_KEYS.forEach(function (key) {
+    const pat = PATTERNS[key];
+    const label = document.createElement('label');
+    label.className = 'tile';
+    const rb = document.createElement('input');
+    rb.type = 'radio';
+    rb.name = 'tplPick';
+    rb.value = key;
+    rb.checked = d.template === key;
+    if (rb.checked) label.classList.add('checked');
+    rb.addEventListener('change', function () {
+      grid.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
+      label.classList.add('checked');
+      d.template = key;
+    });
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = TILE_PX;
+    cv.className = 'tileart';
+    cv.dataset.pattern = key;
+    const cap = document.createElement('span');
+    cap.className = 'tilecap';
+    cap.innerHTML = '<b>' + pat.label + '</b><i>' + pat.hint + '</i>';
+    label.appendChild(rb);
+    label.appendChild(cv);
+    label.appendChild(cap);
+    grid.appendChild(label);
+  });
+  repaintDesignGrid(d.palette);
+}
+
+function repaintDesignGrid(paletteKey) {
+  $('tplGrid').querySelectorAll('canvas.tileart').forEach(function (cv) {
+    paintDesign(cv.getContext('2d'), TILE_PX, cv.dataset.pattern, paletteKey);
+  });
+}
+
+function renderPaletteGrid() {
+  const d = wizardState.draft;
+  const grid = $('toneGrid');
+  grid.innerHTML = '';
+  PALETTE_KEYS.forEach(function (key) {
+    const P = PALETTES[key];
+    const label = document.createElement('label');
+    label.className = 'swatch';
+    const rb = document.createElement('input');
+    rb.type = 'radio';
+    rb.name = 'palettePick';
+    rb.value = key;
+    rb.checked = d.palette === key;
+    if (rb.checked) label.classList.add('checked');
+    rb.addEventListener('change', function () {
+      grid.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
+      label.classList.add('checked');
+      d.palette = key;
+      repaintDesignGrid(key);
+    });
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = 'linear-gradient(135deg,' + P.sw[0] + ' 0 50%,' + P.sw[1] + ' 50% 100%)';
+    const nm = document.createElement('span');
+    nm.className = 'swname';
+    nm.textContent = P.label;
+    label.appendChild(rb);
+    label.appendChild(dot);
+    label.appendChild(nm);
+    grid.appendChild(label);
+  });
 }
 
 /* live preview of the actual crop + feather, on a neutral paper tone */
@@ -1406,15 +2031,26 @@ function updateCityCount() {
   $('cityCount').textContent = 'נבחרו ' + n + ' מתוך ' + MAX_CITIES + ' אפשריות';
 }
 
+const STEP_TITLES = [
+  'תמונת יקירכם',
+  'פרטי ההנצחה',
+  'משפט לזיכרון',
+  'הערים שיופיעו בלוח',
+  'עיצוב הרקע',
+  'סגנון הכתב'
+];
+
 function showStep(i) {
   wizardState.step = i;
   document.querySelectorAll('.wstep').forEach(el =>
     el.classList.toggle('active', Number(el.dataset.step) === i));
-  document.querySelectorAll('#wizProgress span').forEach((el, k) =>
-    el.classList.toggle('on', k <= i));
   $('wizPrev').style.visibility = i === 0 ? 'hidden' : 'visible';
-  $('wizNext').textContent = i === WSTEPS - 1 ? '✓ סיום ושמירה' : 'הבא ←';
+  $('wizNext').textContent = i === WSTEPS - 1 ? '✓ סיום ויצירת הלוח' : 'הבא ←';
   $('wizErr').textContent = '';
+  $('wizStepNum').textContent = 'שלב ' + (i + 1) + ' מתוך ' + WSTEPS;
+  $('wizStepName').textContent = STEP_TITLES[i] || '';
+  $('wizBar').style.width = ((i + 1) / WSTEPS * 100).toFixed(1) + '%';
+  $('wizard').scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function collectStep(i) {
@@ -1442,8 +2078,8 @@ function collectStep(i) {
     const rb = document.querySelector('input[name="tplPick"]:checked');
     if (!rb) return 'בחרו אחד מהעיצובים';
     d.template = rb.value;
-    const tn = document.querySelector('input[name="tonePick"]:checked');
-    d.tone = tn ? tn.value : 'natural';
+    const pk = document.querySelector('input[name="palettePick"]:checked');
+    d.palette = pk ? pk.value : 'navy';
   } else if (i === 5) {
     const rb = document.querySelector('input[name="fontPick"]:checked');
     if (!rb) return 'בחרו סגנון כתב';
@@ -1527,11 +2163,7 @@ function importSettings(file) {
       if (!s || !s.name || !Array.isArray(s.cities) || !s.cities.length) {
         throw new Error('bad shape');
       }
-      if (!TEMPLATES[s.template]) s.template = 'classic';
-      if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
-      if (!TONES[s.tone]) s.tone = 'natural';
-      if (!Array.isArray(s.customCities)) s.customCities = [];
-      settings = s;
+      settings = migrateSettings(s);
       saveSettings(settings);
       photoImage = null;
       applySettingsToHeader();
@@ -1548,6 +2180,7 @@ function importSettings(file) {
 
 function initBoardScreen() {
   applySettingsToHeader();
+  hideIntro();
   $('screenBoard').style.display = 'flex';
   $('wizard').style.display = 'none';
 }
@@ -1565,6 +2198,12 @@ $('btnShare').addEventListener('click', share);
 $('btnSettings').addEventListener('click', () => openWizard(settings));
 $('importFile').addEventListener('change', e => importSettings(e.target.files[0]));
 $('wizImport').addEventListener('click', () => $('importFile').click());
+$('introStart').addEventListener('click', () => openWizard(null));
+$('introImport').addEventListener('click', () => $('importFile').click());
+$('introSources').addEventListener('click', e => {
+  e.preventDefault();
+  $('modalBack').classList.add('open');
+});
 $('wizExport').addEventListener('click', exportSettings);
 $('nudgeSave').addEventListener('click', () => { exportSettings(); dismissNudge(); });
 $('nudgeLater').addEventListener('click', dismissNudge);
@@ -1614,9 +2253,9 @@ async function boot() {
       settings.name = 'שם היקר/ה';
       settings.dateLine = 'תאריך הפטירה';
       settings.verse = 'נר ה׳ נשמת אדם';
-      settings.template = urlParams.get('tpl') || 'classic';
+      settings.template = urlParams.get('tpl') || 'mist';
       settings.fontPair = urlParams.get('font') || 'classic';
-      settings.tone = urlParams.get('tone') || 'natural';
+      settings.palette = urlParams.get('palette') || 'navy';
       settings.cities = ['jerusalem', 'telaviv', 'haifa', 'beersheva', 'ariel', 'katzrin', 'london'];
       saveSettings(settings);
     } catch (e) { console.error('demo seed failed', e); }
@@ -1627,7 +2266,7 @@ async function boot() {
     initBoardScreen();
     if (urlParams.get('auto')) generate();
   } else {
-    openWizard(null);
+    showIntro();
   }
 }
 boot();
