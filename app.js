@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-01 11:20 v8 search-result-card';
+const BUILD = '2026-09-01 22:10 v9 usage-instrumentation';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -1634,6 +1634,7 @@ async function generate() {
 
     touchSettings();
     maybeOfferBackup();
+    if (window.ZN_TRACK) ZN_TRACK.board(settings, plan, rows);
   } catch (e) {
     console.error(e);
     if (String(e.message).startsWith('IMAGE_LOAD_FAILED')) {
@@ -1647,6 +1648,7 @@ async function generate() {
 }
 
 function download() {
+  if (window.ZN_TRACK) ZN_TRACK.save('download');
   canvas.toBlob(b => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b);
@@ -1657,6 +1659,7 @@ function download() {
 }
 
 function share() {
+  if (window.ZN_TRACK) ZN_TRACK.save('share');
   canvas.toBlob(async b => {
     const file = new File([b], lastFilename, { type: 'image/png' });
     try {
@@ -1801,6 +1804,7 @@ function renameCity(draft, key, name) {
 }
 
 function openWizard(prefill) {
+  if (window.ZN_TRACK) ZN_TRACK.wizardStart();
   wizardState.step = 0;
   wizardState.draft = prefill ? JSON.parse(JSON.stringify(prefill)) : defaultDraft();
   hideIntro();
@@ -2409,6 +2413,7 @@ const STEP_TITLES = [
 ];
 
 function showStep(i) {
+  if (window.ZN_TRACK) ZN_TRACK.step(i);
   wizardState.step = i;
   document.querySelectorAll('.wstep').forEach(el =>
     el.classList.toggle('active', Number(el.dataset.step) === i));
@@ -2638,5 +2643,6 @@ async function boot() {
   }
 }
 boot();
+if (window.ZN_TRACK) ZN_TRACK.visit();
 
 document.getElementById('buildStamp').textContent = 'גרסה: ' + BUILD;

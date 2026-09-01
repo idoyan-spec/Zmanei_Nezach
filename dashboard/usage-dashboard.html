@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>זמני נצח — שימוש הציבור</title>
+<link rel="icon" href="../icon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #21283c; --ink-2: #4a536b; --ink-3: #7b8499;
+    --gold: #a97f38; --gold-soft: #d3ac5f;
+    --navy: #26355f;
+    --bg: #f6f3ec; --surface: #fffdf8; --surface-2: #fbf8f1;
+    --line: #e6ded0; --line-2: #d3c7b2;
+    --good: #2b6142; --warn: #9c5b2a;
+    --ui: 'Heebo', system-ui, sans-serif;
+    --display: 'Frank Ruhl Libre', Georgia, serif;
+    --r: 14px;
+    --sh: 0 2px 10px rgba(40,32,16,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--ui); font-size: 15.5px; line-height: 1.6;
+    padding: 26px 20px 60px;
+  }
+  header { max-width: 1180px; margin: 0 auto 22px; }
+  h1 { font-family: var(--display); font-size: 30px; margin: 0 0 4px; color: var(--navy); }
+  .sub { color: var(--ink-3); font-size: 14.5px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 22px; }
+  .bar button {
+    font: inherit; font-size: 14.5px; padding: 7px 15px; cursor: pointer;
+    border: 1.5px solid var(--line-2); background: var(--surface); color: var(--ink-2);
+    border-radius: 999px; transition: all .15s;
+  }
+  .bar button:hover { border-color: var(--gold); }
+  .bar button.on { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; }
+  .stamp { margin-inline-start: auto; color: var(--ink-3); font-size: 13px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 13px; margin-bottom: 22px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 15px 17px; box-shadow: var(--sh);
+  }
+  .card .n { font-family: var(--display); font-size: 33px; font-weight: 700; color: var(--navy); line-height: 1.15; }
+  .card .l { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
+  .card .h { color: var(--ink-2); font-size: 12.5px; margin-top: 6px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 16px 18px 18px; box-shadow: var(--sh);
+  }
+  .panel h2 { font-family: var(--display); font-size: 18px; margin: 0 0 3px; color: var(--navy); }
+  .panel .why { color: var(--ink-3); font-size: 13px; margin: 0 0 13px; }
+  .panel.wide { grid-column: 1 / -1; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 5px 0; vertical-align: middle; }
+  td.k { white-space: nowrap; padding-inline-end: 10px; color: var(--ink-2); }
+  td.n { text-align: start; width: 52px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  td.b { width: 100%; }
+  .track { background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; height: 15px; overflow: hidden; }
+  .fill { height: 100%; background: linear-gradient(90deg, var(--gold-soft), var(--gold)); border-radius: 999px; }
+  .fill.navy { background: linear-gradient(90deg, #5c7ab0, var(--navy)); }
+  .fill.green { background: linear-gradient(90deg, #6aa07d, var(--good)); }
+
+  .spark { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin-top: 8px; }
+  .spark div { flex: 1; min-width: 2px; background: linear-gradient(180deg, #5c7ab0, var(--navy)); border-radius: 2px 2px 0 0; }
+  .spark div.b2 { background: linear-gradient(180deg, var(--gold-soft), var(--gold)); }
+  .sparkwrap { display: grid; gap: 3px; }
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-3); margin-top: 8px; }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+
+  .funnel td.k { width: 190px; }
+  .empty { color: var(--ink-3); font-style: italic; padding: 10px 0; }
+  .note {
+    margin-top: 22px; background: #f2f6f1; border: 1px solid #cfe0d2;
+    border-radius: var(--r); padding: 14px 17px; color: #2f4a38; font-size: 14px;
+  }
+  .note b { color: var(--good); }
+  .err {
+    background: #fdf2ee; border: 1px solid #efc9b8; color: #8a3d1c;
+    border-radius: var(--r); padding: 16px 18px; margin-bottom: 20px;
+  }
+  .err code { background: #fff; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1>זמני נצח — שימוש הציבור</h1>
+  <div class="sub">כמה משפחות מגיעות, כמה מהן באמת מסיימות לוח, ומה הן בוחרות.</div>
+</header>
+
+<div class="wrap">
+  <div class="bar">
+    <button data-days="7">7 ימים</button>
+    <button data-days="30" class="on">30 יום</button>
+    <button data-days="90">90 יום</button>
+    <button data-days="365">שנה</button>
+    <span class="stamp" id="stamp"></span>
+  </div>
+  <div id="body"></div>
+</div>
+
+<!-- Written by refresh.mjs. Missing on a first run, and the page says so. -->
+<script src="stats.js"></script>
+<script>
+/* The dashboard never holds the admin token. refresh.mjs pulls it from
+ * Bitwarden, calls the collector, and drops the answer next to this file as
+ * stats.js — so the secret lives in memory for one command and nowhere on
+ * disk. Opening this page on its own just shows the last refresh. */
+
+const LABELS = {
+  patterns: { mist:'ערפל', halo:'הילה', bloom:'פריחה', waves:'גלים', dunes:'חולות',
+              strata:'שכבות', aurora:'זוהר', veins:'שיש', orbit:'מעגלים', arch:'קשת' },
+  palettes: { navy:'כחול קלאסי', olive:'ירוק זית', stone:'אבן ירושלים', amber:'שדה זהב',
+              sage:'מרווה', tchelet:'תכלת', wine:'יין ורימון', rose:'ורד עתיק',
+              plum:'סגול עמוק', forest:'יער', slate:'אפור-כחול', sand:'חול ולבן',
+              midnight:'ליל חצות', charcoal:'פחם וזהב' },
+  fonts: { classic:'קלאסי', modern:'מודרני', festive:'חגיגי', soft:'רך', stone:'אבן' },
+  cities: { jerusalem:'ירושלים', telaviv:'תל אביב', haifa:'חיפה', beersheva:'באר שבע',
+            ashdod:'אשדוד', netanya:'נתניה', tzfat:'צפת', eilat:'אילת', modiin:'מודיעין',
+            shomron:'שומרון', ramatgolan:'רמת הגולן', london:'לונדון', paris:'פריז',
+            newyork:'ניו יורק', losangeles:'לוס אנג׳לס' },
+  steps: ['תמונה', 'פרטי ההנצחה', 'משפט לזיכרון', 'ערים', 'עיצוב הרקע', 'סגנון הכתב'],
+  verses: { none:'בלי משפט', custom:'משפט אישי משלהם', v1:'נר ה׳ נשמת אדם',
+            v2:'יהי זכרו ברוך', v3:'יהי זכרה ברוך',
+            v4:'תהא נשמתו צרורה בצרור החיים', v5:'תהא נשמתה צרורה בצרור החיים' },
+  saves: { download:'הורדה למכשיר', share:'שיתוף ישיר' },
+  devices: { mobile:'טלפון', desktop:'מחשב' },
+  modes: { shabbat:'שבת', fast:'צום', chag:'חג', unknown:'לא ידוע' },
+  photos: { 1:'עם תמונה', 0:'בלי תמונה' }
+};
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const label = (dict, k) => (dict && dict[k]) || cityName(k) || k;
+
+/* A locality the tool did not ship with arrives as il:<name> or tz:<zone> —
+   the two shapes usage.js is allowed to send. */
+function cityName(k) {
+  if (typeof k !== 'string') return null;
+  if (k.startsWith('il:')) return k.slice(3) + ' ★';
+  if (k.startsWith('tz:')) return 'חו״ל · ' + k.slice(3);
+  return null;
+}
+
+function rows(list, dict, cls) {
+  if (!list || !list.length) return '<div class="empty">אין עדיין נתונים</div>';
+  const max = Math.max(...list.map(r => r.n)) || 1;
+  return '<table>' + list.map(r =>
+    '<tr><td class="k">' + esc(label(dict, r.k)) + '</td>' +
+    '<td class="n">' + r.n + '</td>' +
+    '<td class="b"><div class="track"><div class="fill ' + (cls || '') +
+      '" style="width:' + Math.max(2, r.n / max * 100).toFixed(1) + '%"></div></div></td></tr>'
+  ).join('') + '</table>';
+}
+
+function panel(title, why, inner, wide) {
+  return '<section class="panel' + (wide ? ' wide' : '') + '"><h2>' + title + '</h2>' +
+         '<p class="why">' + why + '</p>' + inner + '</section>';
+}
+
+function mmss(sec) {
+  if (!sec) return '—';
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return m ? m + ' דק׳ ' + String(s).padStart(2, '0') + ' שנ׳' : s + ' שנ׳';
+}
+
+function render(d, generated) {
+  const t = d.totals || {};
+  const visits = Number(t.visits || 0), boards = Number(t.boards || 0);
+  const conv = visits ? (boards / visits * 100) : 0;
+  const dur = d.duration || {};
+
+  /* The average board count per city tells you nothing; the number of boards
+     that carried each city does. */
+  const avgCities = (() => {
+    const l = d.ncities || [];
+    const n = l.reduce((a, r) => a + r.n, 0);
+    return n ? (l.reduce((a, r) => a + r.k * r.n, 0) / n) : 0;
+  })();
+
+  const html = [];
+
+  html.push('<div class="cards">' + [
+    ['ביקורים', visits, 'דפדפנים שנכנסו בתקופה'],
+    ['לוחות שנוצרו', boards, 'הגיעו עד תמונה מוכנה'],
+    ['אחוז המרה', conv.toFixed(1) + '%', 'מתוך הנכנסים — כמה סיימו'],
+    ['זמן ממוצע', mmss(Number(dur.avg || 0)), 'מפתיחת האשף ועד לוח מוכן (' + (dur.n || 0) + ' מדידות)'],
+    ['ערים בלוח', avgCities ? avgCities.toFixed(1) : '—', 'בממוצע לכל לוח'],
+    ['שמירות', Number(t.saves || 0), 'הורדה או שיתוף']
+  ].map(c =>
+    '<div class="card"><div class="n">' + esc(c[1]) + '</div><div class="l">' + c[0] +
+    '</div><div class="h">' + c[2] + '</div></div>'
+  ).join('') + '</div>');
+
+  /* daily series */
+  const daily = d.daily || [];
+  if (daily.length) {
+    const maxV = Math.max(1, ...daily.map(r => Math.max(r.visits || 0, r.boards || 0)));
+    const bars = k => '<div class="spark">' + daily.map(r =>
+      '<div class="' + (k === 'boards' ? 'b2' : '') + '" title="' + r.day + ': ' + (r[k] || 0) +
+      '" style="height:' + Math.max(2, (r[k] || 0) / maxV * 100) + '%"></div>').join('') + '</div>';
+    html.push(panel('לאורך הזמן', 'ביקורים מול לוחות שנוצרו, יום ביום. פער גדול ויציב אומר שאנשים נכנסים ולא מסיימים.',
+      '<div class="sparkwrap">' + bars('visits') + bars('boards') + '</div>' +
+      '<div class="legend"><span><i style="background:#26355f"></i>ביקורים</span>' +
+      '<span><i style="background:#a97f38"></i>לוחות</span>' +
+      '<span>' + daily[0].day + ' — ' + daily[daily.length - 1].day + '</span></div>', true));
+  }
+
+  /* funnel */
+  const steps = d.steps || [];
+  if (steps.length) {
+    const top = Math.max(...steps.map(s => s.n)) || 1;
+    const body = '<table class="funnel">' + steps.map(s => {
+      const drop = s.n / top * 100;
+      return '<tr><td class="k">' + (s.k + 1) + '. ' + esc(LABELS.steps[s.k] || s.k) + '</td>' +
+             '<td class="n">' + s.n + '</td>' +
+             '<td class="b"><div class="track"><div class="fill navy" style="width:' +
+             Math.max(2, drop).toFixed(1) + '%"></div></div></td></tr>';
+    }).join('') + '</table>';
+    html.push(panel('איפה נוטשים את האשף', 'כמה הגיעו לכל שלב. השלב שבו הפס נחתך הוא זה שצריך תיקון.', body, true));
+  }
+
+  html.push('<div class="grid">');
+  html.push(panel('עיצובים', 'איזו קומפוזיציה נבחרת בפועל. עיצוב שאיש לא בוחר אפשר להחליף.',
+    rows(d.patterns, LABELS.patterns)));
+  html.push(panel('גווני צבע', 'ארבעה־עשר גוונים — כדאי לדעת אם רובם אף פעם לא נבחרים.',
+    rows(d.palettes, LABELS.palettes, 'navy')));
+  html.push(panel('ערים בלוחות', 'כמה לוחות כללו כל עיר. שם עם ★ הוא יישוב שנוסף בחיפוש — מועמד להיכנס לרשימה המובנית.',
+    rows((d.cities || []).map(c => ({ k: c.k, n: c.n })), LABELS.cities, 'green')));
+  html.push(panel('משפטי הזיכרון', 'לפי מיקום ברשימה בלבד — נוסח המשפט לא נשלח. "משפט אישי משלהם" גבוה = הרשימה חסרה.',
+    rows(d.verses, LABELS.verses)));
+  html.push(panel('סגנונות כתב', 'חמישה זוגות גופנים.', rows(d.fonts, LABELS.fonts, 'navy')));
+  html.push(panel('מאיפה הגיעו', 'הדומיין המפנה בלבד, בלי הכתובת המלאה.', rows(d.refs, null, 'green')));
+  html.push(panel('מכשיר', 'טלפון מול מחשב.', rows(d.devices, LABELS.devices)));
+  html.push(panel('מדינה', 'לפי הזיהוי של Cloudflare. כתובת ה-IP עצמה לא נשמרת.', rows(d.countries, null, 'navy')));
+  html.push(panel('סוג הלוח', 'שבת, חג או צום.', rows(d.modes, LABELS.modes, 'green')));
+  html.push(panel('תמונה', 'האם הועלתה תמונה בכלל.', rows(d.photos, LABELS.photos)));
+  html.push(panel('איך שמרו', 'הורדה למכשיר מול שיתוף ישיר.', rows(d.saves, LABELS.saves, 'navy')));
+  html.push(panel('כמה ערים בלוח', 'התפלגות מספר הערים.',
+    rows((d.ncities || []).map(r => ({ k: r.k + ' ערים', n: r.n })), null, 'green')));
+  html.push('</div>');
+
+  html.push('<div class="note"><b>מה לא נמצא כאן, במכוון:</b> שמות הנפטרים, שורות התאריך, ' +
+    'משפטים שנכתבו אישית ותמונות. הם לא נשלחים מהמכשיר, ולכן אין להם מקום להגיע אליו. ' +
+    'הכלי מבטיח למשפחות בעמוד הראשי ש"אף אחד אחר לא רואה את מה שהזנתם" — ' +
+    'הדשבורד הזה בנוי כך שההבטחה נשארת נכונה.</div>');
+
+  document.getElementById('body').innerHTML = html.join('');
+  document.getElementById('stamp').textContent =
+    'עודכן: ' + new Date(generated || d.generated).toLocaleString('he-IL') + ' · ' + d.days + ' ימים';
+}
+
+function showError(msg, detail) {
+  document.getElementById('body').innerHTML =
+    '<div class="err"><b>' + esc(msg) + '</b><br>' + detail + '</div>';
+}
+
+function load(days) {
+  try {
+    const FILE = window.ZN_STATS;
+    if (!FILE) throw new Error('no stats.js');
+    const d = (FILE.ranges || {})[days];
+    if (!d) {
+      showError('התקופה הזאת לא נשמרה בקובץ.',
+        'הריצו שוב <code>node dashboard/refresh.mjs</code> — הוא מושך את כל התקופות יחד.');
+      return;
+    }
+    render(d, FILE.generated);
+  } catch (e) {
+    showError('אין עדיין קובץ נתונים.',
+      'הריצו <code>node dashboard/refresh.mjs</code> כדי למשוך את הנתונים מהאוסף, ' +
+      'או פתחו את הדשבורד דרך קיצור הדרך <b>זמני נצח — שימוש</b> שעושה זאת לבד.');
+  }
+}
+
+document.querySelectorAll('.bar button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.bar button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    load(Number(b.dataset.days));
+  });
+});
+
+load(30);
+</script>
+</body>
+</html>

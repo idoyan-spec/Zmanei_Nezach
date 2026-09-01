@@ -1,0 +1,14 @@
+name = "zmanei-nezach-usage"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Created by:  wrangler d1 create zmanei-nezach-usage
+# then paste the database_id the command prints into the line below.
+[[d1_databases]]
+binding = "DB"
+database_name = "zmanei-nezach-usage"
+database_id = "PASTE_DATABASE_ID_HERE"
+
+# ADMIN_TOKEN is NOT set here on purpose — a token in a tracked file is a
+# published token. Set it once with:
+#   wrangler secret put ADMIN_TOKEN
