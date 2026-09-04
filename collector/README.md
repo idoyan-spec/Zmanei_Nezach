@@ -21,9 +21,23 @@
 
 ## הקמה
 
-### 1. חשבון Cloudflare
-היכנסו ל-<https://dash.cloudflare.com/sign-up> ופתחו חשבון חינמי.
+### 1. חשבון Cloudflare **נפרד** — וזה לא פרט טכני
+
+בניסיון הראשון התחברנו לחשבון הקיים, וזו הייתה טעות. הסיבה איננה מספר ההרשאות
+ש-wrangler מבקש (29, ואי אפשר לצמצם אותן) אלא **מה יושב באותו חשבון**: הדומיין
+clickit-game.com ופרויקט השלטים. הרשאות `email_sending`, `email_routing`,
+`pages:write` ו-`workers:write` נוגעות בהם ישירות.
+
+חשבון ייעודי הופך את זה מ"סיכון מצומצם" ל"אין סיכון": הרשאות רחבות בחשבון
+שאין בו כלום הן הרשאות על כלום. אם טוקן דולף — מוחקים את החשבון ומתחילים מחדש,
+ושום דבר אחר לא נגוע.
+
+היכנסו ל-<https://dash.cloudflare.com/sign-up> ופתחו חשבון חינמי **חדש**,
+למשל עם `idoyan+zmanei@gmail.com` (Gmail מעביר את זה לאותה תיבה).
 **את זה צריך לעשות בעצמך** — אני לא פותח חשבונות.
+
+> אם אי פעם תתחברו בטעות לחשבון הישן: `wrangler whoami` מציג את המייל,
+> ו-`wrangler logout` מבטל.
 
 ### 2. wrangler
 ```
@@ -43,14 +57,14 @@ wrangler d1 execute zmanei-nezach-usage --remote --file=schema.sql
 ```
 
 ### 4. טוקן הגישה לדשבורד
-ייצרו מחרוזת אקראית ארוכה (למשל `openssl rand -base64 32`), ואז:
+מחרוזת אקראית, שנשמרת בשני מקומות: כסוד ב-Worker, וכסוד ב-Bitwarden.
 
 ```
 wrangler secret put ADMIN_TOKEN
 ```
 
-**שמרו את אותה מחרוזת ב-Bitwarden Secrets Manager** — הדשבורד המקומי מושך אותה
-משם בזמן ריצה. אל תכתבו אותה בשום קובץ בפרויקט.
+ואותה מחרוזת ב-Bitwarden Secrets Manager, בפרויקט `personal-dev`, בשם
+`ZN_ADMIN_TOKEN`. אל תכתבו אותה בשום קובץ בפרויקט.
 
 ### 5. פריסה
 ```
@@ -71,15 +85,29 @@ ENDPOINT: 'https://zmanei-nezach-usage.<שם>.workers.dev',
 הוסיפו את כתובת האתר ל-`ALLOWED_ORIGINS` שבראש `worker.js` אם היא שונה, ופרסו שוב.
 
 ### 7. הדשבורד
-```
-cd dashboard
-copy settings.local.cmd.example settings.local.cmd
-```
-מלאו שם את `ZN_COLLECTOR` ואת `ZN_TOKEN_SECRET_ID` (מזהה הסוד ב-Bitwarden).
-הקובץ הזה לא נכנס ל-git.
+
+שני סודות בפרויקט `personal-dev` ב-Bitwarden Secrets Manager:
+
+| שם הסוד | ערך |
+|---------|-----|
+| `ZN_ADMIN_TOKEN` | אותה מחרוזת מסעיף 4 |
+| `ZN_COLLECTOR` | כתובת ה-Worker מסעיף 5 |
+
+זהו. אין קובץ הגדרות ואין ערך כתוב בשום מקום בריפו — `refresh.mjs` קורא
+`process.env` בלבד, ו-`scripts/launch.ps1` מזריק דרך `bws run`, בדיוק כמו
+בשאר הפרויקטים (ראו `~/.claude/HOW_TO_ADD_KEY.md`).
 
 מכאן — קיצור הדרך **"זמני נצח - שימוש הציבור"** שעל שולחן העבודה מושך את הנתונים
 ופותח את הדשבורד.
+
+### 8. אחרי הפריסה
+
+```
+wrangler logout
+```
+
+הטוקן נמחק מהדיסק. הפריסה שרצה לא נפגעת, והאיסוף ממשיך לעבוד — הטוקן נחוץ
+רק כדי לפרוס מחדש. זה מוריד את החשיפה מ"תמיד" ל"בזמן העבודה בלבד".
 
 ## בדיקה לפני פריסה
 

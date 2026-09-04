@@ -601,13 +601,12 @@
   /* ---- cities ---- */
   .citygrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: 9px;
   }
   .citygrid label {
     position: relative;
-    display: flex; align-items: center; gap: 9px;
-    padding-inline-end: 30px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 7px;
     background: var(--surface-2);
     border: 1.5px solid var(--line);
     border-radius: var(--r-md);
@@ -622,13 +621,31 @@
     border-color: rgba(169,127,56,.55);
     font-weight: 600;
   }
+  .citygrid .ctop {
+    display: flex; align-items: center; gap: 9px;
+    padding-inline-end: 26px; min-width: 0;
+  }
   .citygrid input[type=checkbox] { accent-color: var(--gold); width: 19px; height: 19px; flex: none; }
   .citygrid .cnm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .citygrid .cmin { color: var(--ink-3); font-size: 13px; font-weight: 400; flex: none; }
+  /* Always visible, for preset cities too — the minutes are a halachic value,
+     and one the family has to be able to see and correct. */
+  .citygrid .cmin {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--ink-3); font-size: 12.5px; font-weight: 400;
+    padding-inline-start: 28px;
+  }
+  .citygrid .cmin select {
+    font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink);
+    min-height: 0; width: auto; padding: 3px 22px 3px 7px;
+    border: 1.5px solid var(--line-2); border-radius: 8px;
+    background: #fff; cursor: pointer;
+  }
+  .citygrid .cmin select:hover { border-color: var(--gold); }
+  .citygrid .cmin.changed select { border-color: var(--gold); background: rgba(169,127,56,.10); }
   /* the pencil stays quiet until the row is touched — it is a repair tool,
      not something every family needs to notice */
   .citygrid .ren {
-    position: absolute; inset-inline-end: 5px; top: 50%; transform: translateY(-50%);
+    position: absolute; inset-inline-end: 5px; top: 11px;
     border: 0; background: none; cursor: pointer;
     color: var(--ink-3); font-size: 16px; line-height: 1;
     padding: 3px 5px; border-radius: 7px; opacity: .35;
@@ -1082,7 +1099,9 @@
         <div class="citygrid" id="cityGrid"></div>
         <div id="cityCount"></div>
         <div class="hint" style="text-align:center; margin-top:6px">
-          השם שמופיע כאן הוא השם שיודפס בלוח. לתיקון — לחצו על ✎ שליד היישוב.
+          השם שמופיע כאן הוא השם שיודפס בלוח — לתיקון לחצו על ✎.
+          <strong>דקות הדלקת הנרות ניתנות לשינוי לכל עיר</strong>, גם לערים שהיו ברשימה מראש,
+          לפי המנהג במקום שלכם.
         </div>
         <div class="field" style="margin-top:22px">
           <label for="citySearch">לא מצאתם? חפשו כל עיר או יישוב בעולם</label>
@@ -1195,6 +1214,6 @@
        family: without it a browser that has app.js cached keeps running last
        week's code against this week's index.html. Bump it with BUILD. -->
   <script src="usage.js?v=1"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

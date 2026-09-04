@@ -22,6 +22,5 @@ secrets.*
 # --- usage dashboard: local-only data and settings ---
 dashboard/stats.js
 dashboard/stats.json
-dashboard/settings.local.cmd
 collector/.wrangler/
 collector/node_modules/

@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-01 22:10 v9 usage-instrumentation';
+const BUILD = '2026-09-04 10:05 v10 candle-minutes-editable';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -924,6 +924,7 @@ function migrateSettings(s) {
   if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
   if (!Array.isArray(s.customCities)) s.customCities = [];
   if (!s.renames || typeof s.renames !== 'object') s.renames = {};
+  if (!s.minutes || typeof s.minutes !== 'object') s.minutes = {};
   if (!s.photoZoom) s.photoZoom = 100;
   s.v = 3;
   return s;
@@ -1776,6 +1777,7 @@ function defaultDraft() {
     cities: ['jerusalem', 'telaviv', 'haifa', 'beersheva'],
     customCities: [],
     renames: {},
+    minutes: {},
     template: 'mist',
     palette: 'navy',
     fontPair: 'classic'
@@ -1790,9 +1792,29 @@ function defaultDraft() {
 function allCities(src) {
   const custom = (src && src.customCities) || [];
   const ren = (src && src.renames) || {};
+  const min = (src && src.minutes) || {};
   return CITIES.concat(custom).map(function (c) {
-    return ren[c.key] ? Object.assign({}, c, { name: ren[c.key] }) : c;
+    if (!ren[c.key] && !min[c.key]) return c;
+    return Object.assign({}, c, {
+      name: ren[c.key] || c.name,
+      candles: min[c.key] || c.candles
+    });
   });
+}
+
+/* Candle-lighting minutes are a halachic value, not a preference, and until
+ * now they could be set exactly once — while adding a searched city — and
+ * never afterwards, and never at all for the fifteen preset cities. Jerusalem
+ * was fixed at 40 without even showing it, so a city added at 40 by mistake
+ * printed almost the same time as Jerusalem and there was no way to see why,
+ * let alone fix it. */
+function setCityMinutes(draft, key, minutes) {
+  const n = Number(minutes);
+  if (!draft.minutes) draft.minutes = {};
+  const base = (CITIES.concat(draft.customCities || [])
+    .find(function (c) { return c.key === key; }) || {}).candles;
+  if (!isFinite(n) || n === base) delete draft.minutes[key];
+  else draft.minutes[key] = n;
 }
 
 function renameCity(draft, key, name) {
@@ -2022,6 +2044,9 @@ function renderCityGrid() {
   grid.innerHTML = '';
   allCities(d).forEach(c => {
     const label = document.createElement('label');
+    const top = document.createElement('span');
+    top.className = 'ctop';
+
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.value = c.key;
@@ -2031,20 +2056,12 @@ function renderCityGrid() {
       label.classList.toggle('checked', cb.checked);
       updateCityCount();
     });
-    label.appendChild(cb);
+    top.appendChild(cb);
 
     const nm = document.createElement('span');
     nm.className = 'cnm';
     nm.textContent = c.name;
-    label.appendChild(nm);
-
-    // searched-in cities show their candle custom, so a wrong one is visible
-    if (!CITIES.some(p => p.key === c.key)) {
-      const tag = document.createElement('small');
-      tag.className = 'cmin';
-      tag.textContent = c.candles + ' דק׳';
-      label.appendChild(tag);
-    }
+    top.appendChild(nm);
 
     /* The name as it prints is the name shown here, so it is edited here.
      * A <button> inside a <label> is interactive content, which the spec
@@ -2057,16 +2074,45 @@ function renderCityGrid() {
     pen.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
-      startRename(label, nm, pen, d, c.key);
+      startRename(top, nm, pen, d, c.key);
     });
-    label.appendChild(pen);
+    top.appendChild(pen);
+    label.appendChild(top);
+
+    /* Shown for every city, preset ones included. Hiding Jerusalem's 40 was
+     * half the bug: a family could not see why their own town printed the
+     * same time as Jerusalem. */
+    const row = document.createElement('span');
+    row.className = 'cmin';
+    const cap = document.createElement('span');
+    cap.textContent = 'הדלקת נרות:';
+    const sel = document.createElement('select');
+    sel.title = 'דקות לפני השקיעה, לפי מנהג המקום';
+    const cur = c.candles;
+    CANDLE_CHOICES.concat(CANDLE_CHOICES.indexOf(cur) > -1 ? [] : [cur]).forEach(m => {
+      const o = document.createElement('option');
+      o.value = m;
+      o.textContent = m + ' דק׳';
+      if (m === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('click', e => e.stopPropagation());
+    sel.addEventListener('change', e => {
+      e.stopPropagation();
+      setCityMinutes(d, c.key, sel.value);
+      row.classList.toggle('changed', !!(d.minutes && d.minutes[c.key]));
+    });
+    if (d.minutes && d.minutes[c.key]) row.classList.add('changed');
+    row.appendChild(cap);
+    row.appendChild(sel);
+    label.appendChild(row);
 
     grid.appendChild(label);
   });
   updateCityCount();
 }
 
-function startRename(label, nm, pen, draft, key) {
+function startRename(top, nm, pen, draft, key) {
   const box = document.createElement('input');
   box.type = 'text';
   box.className = 'renbox';
@@ -2085,7 +2131,7 @@ function startRename(label, nm, pen, draft, key) {
     if (e.key === 'Escape') { e.preventDefault(); finish(false); }
   });
   box.addEventListener('blur', () => finish(true));
-  label.replaceChild(box, nm);
+  top.replaceChild(box, nm);
   pen.style.display = 'none';
   box.focus();
   box.select();
