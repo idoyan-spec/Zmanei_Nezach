@@ -82,7 +82,7 @@
 
 <script>
 /* ==== DATA START — managed by Claude; refreshed on every /session-backup ==== */
-const STAMP = 'עודכן: 2026-09-04 10:20 · BUILD v6 candle-minutes-editable';
+const STAMP = 'עודכן: 2026-09-05 00:20 · BUILD v7 session-close';
 const TASKS = [
   {id:1, name:'אימות נוסח רישיון מאגר היישובים', cat:'משפטי', imp:4, cx:2, cost:1, status:'ready', deps:[], note:'data.gov.il/terms מחזיר 404 והלמ"ס מנתק — מסומן "פתוח" במטא-דאטה אך הנוסח לא נקרא בפועל. סיכון זניח לאתר לא-מסחרי'},
   {id:2, name:'רענון מאגר היישובים (נתוני 2019)', cat:'נתונים', imp:3, cx:2, cost:1, status:'ready', deps:[1], note:'שכבת ArcGIS מוקפאת ב-2019 ומתארחת אצל חברה פרטית. לבדוק אחת לשנה'},
@@ -103,6 +103,8 @@ const TASKS = [
   {id:26, name:'דשבורד שימוש מקומי', cat:'מוצר', imp:4, cx:2, cost:1, status:'test', deps:[25], note:'עמוד בסגנון הבית עם קיצור דרך ואייקון. הטוקן נמשך מ-Bitwarden בזמן ריצה ואינו נכתב לשום קובץ. המטען נכתב כ-stats.js ולא JSON כי עמוד file:// אינו רשאי לעשות fetch לקובץ שלידו. אומת מול נתוני דוגמה שנוצרו דרך ה-Worker האמיתי'},
   {id:27, name:'החלטה: שמות נפטרים לא נאספים', cat:'מוצר', imp:5, cx:1, cost:1, status:'decide', deps:[24], note:'הוזמן במפורש, ולא מומש. עמוד הכניסה מבטיח למשפחות ש"אף אחד אחר לא רואה את מה שהזנתם" — איסוף השמות היה הופך את המשפט הזה לשקר. פופולריות המשפטים כן נאספת, לפי אינדקס ברשימה הסגורה. ממתין להחלטת המשתמש'},
   {id:28, name:'דקות הדלקת נרות ניתנות לשינוי', cat:'תקינות', imp:5, cx:2, cost:1, status:'done', deps:[], note:'שתי תלונות מהשטח שהן אותו באג: הדקות ניתנות היו לקביעה פעם אחת בלבד בעת הוספת יישוב מחיפוש, ולערים המובנות כלל לא. ירושלים ישבה על 40 בלי להציג זאת, ולכן עיר שהוגדרה בטעות ל-40 הדפיסה שעה כמעט זהה — אומת מול Hebcal: 18:19 מול 18:21, מול 18:41 בערך הנכון. כעת כל שורת עיר מציגה בורר, ומפת minutes מוחלת ב-allCities() לצד renames'},
+  {id:29, name:'הקמת אוסף נתוני השימוש', cat:'תשתית', imp:3, cx:2, cost:1, status:'blocked', deps:[24,25,26], note:'הקוד מוכן ובדוק אך מכובה — ENDPOINT ריק ואין אוסף פרוס. חסום עד לפתיחת חשבון Cloudflare נפרד (idoyan+zmanei@gmail.com). החשבון הקיים נפסל במכוון: הוא מחזיק את clickit-game.com ואת פרויקט השלטים, ו-wrangler דורש 29 הרשאות שאי אפשר לצמצם, ביניהן email_sending ו-pages:write. נותר גם מסד D1 ריק בחשבון הישן למחיקה ידנית'},
+  {id:30, name:'origin משותף ב-github.io', cat:'תקינות', imp:3, cx:1, cost:1, status:'done', deps:[], note:'כל הפרויקטים תחת idoyan-spec.github.io חולקים localStorage אחד. localStorage.clear() באתר החי מחק בפועל את pillapp.state.v1 של פרויקט אחר, והערך לא ניתן לשחזור — מחיקה ב-LevelDB משאירה tombstone. הכלל תועד ב-PROJECT_SUMMARY: תמיד removeItem על מפתח מפורש, ושמות מפתחות מקודמים בשם האפליקציה'},
   {id:7, name:'פיצול לפרויקט עצמאי Zmanei_Nezach', cat:'ארכיטקטורה', imp:5, cx:3, cost:2, status:'done', deps:[], note:'תיקייה, ריפו, אייקון, כותרת — וניתוק מלא מ-נבנצל'},
   {id:8, name:'הקטנת נכסים פי 10 (WebP + ממוזערות)', cat:'ביצועים', imp:5, cx:2, cost:2, status:'done', deps:[], note:'ביקור ראשון מ-7.26MB ל-734KB — מסיר את תקרת רוחב הפס'},
   {id:9, name:'הטמעת 1,174 יישובי ישראל', cat:'נתונים', imp:5, cx:3, cost:2, status:'done', deps:[], note:'חיפוש מקומי מיידי + נורמליזציית כתיב מלא/חסר; Nominatim ירד למוצא אחרון'},
