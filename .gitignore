@@ -24,3 +24,5 @@ dashboard/stats.js
 dashboard/stats.json
 collector/.wrangler/
 collector/node_modules/
+
+.runtime/

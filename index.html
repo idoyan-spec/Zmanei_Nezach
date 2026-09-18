@@ -661,6 +661,31 @@
   }
   @media (hover: none) { .citygrid .ren { opacity: .75; } }
   #cityCount { text-align: center; color: var(--ink-3); margin-top: 12px; font-size: 15px; }
+  #cityCount.over { color: #9a2f2f; font-weight: 700; }
+  /* Empty until it has something to say, so it takes no room on a normal
+     selection and cannot be mistaken for a permanent error. */
+  .citywarn { display: none; }
+  .citywarn.show, .citywarn.stop {
+    display: block;
+    margin: 10px auto 0;
+    max-width: 640px;
+    text-align: center;
+    font-size: 14.5px;
+    line-height: 1.55;
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+  }
+  .citywarn.show {
+    background: rgba(200, 150, 40, .12);
+    border: 1px solid rgba(169, 127, 56, .45);
+    color: var(--ink-2, #4a4335);
+  }
+  .citywarn.stop {
+    background: rgba(154, 47, 47, .10);
+    border: 1px solid rgba(154, 47, 47, .40);
+    color: #7d2626;
+    font-weight: 600;
+  }
 
   .citysearch { display: flex; gap: 8px; }
   .citysearch input { flex: 1; min-width: 0; }
@@ -955,7 +980,7 @@
       </li>
       <li>
         <b>בוחרים ערים ועיצוב</b>
-        <span>עד 8 ערים ויישובים בארץ ובעולם, רקע וגוון צבע לפי טעמכם.</span>
+        <span>עד 15 ערים ויישובים בארץ ובעולם, רקע וגוון צבע לפי טעמכם.</span>
       </li>
       <li>
         <b>מקבלים לוח כל שבוע</b>
@@ -1098,6 +1123,7 @@
         <p class="lead">בחרו את הערים שבהן גרים בני המשפחה והחברים שיקבלו את הלוח.</p>
         <div class="citygrid" id="cityGrid"></div>
         <div id="cityCount"></div>
+        <div id="cityWarn" class="citywarn" role="status" aria-live="polite"></div>
         <div class="hint" style="text-align:center; margin-top:6px">
           השם שמופיע כאן הוא השם שיודפס בלוח — לתיקון לחצו על ✎.
           <strong>דקות הדלקת הנרות ניתנות לשינוי לכל עיר</strong>, גם לערים שהיו ברשימה מראש,
@@ -1214,6 +1240,6 @@
        family: without it a browser that has app.js cached keeps running last
        week's code against this week's index.html. Bump it with BUILD. -->
   <script src="usage.js?v=1"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

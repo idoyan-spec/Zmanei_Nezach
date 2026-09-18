@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-04 10:05 v10 candle-minutes-editable';
+const BUILD = '2026-09-18 15:05 v11 up-to-15-cities';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -836,7 +836,13 @@ const CITIES = [
   { key: 'paris',     name: 'פריז',      lat: 48.8566, lng: 2.3522,   tzid: 'Europe/Paris',        candles: 18, israel: false },
   { key: 'la',        name: 'לוס אנג׳לס', lat: 34.0522, lng: -118.2437, tzid: 'America/Los_Angeles', candles: 18, israel: false }
 ];
-const MAX_CITIES = 8;
+/* Eight rows is what the band between the headers and the plaque was drawn
+ * for, at full type size. More is allowed — a family spread over a dozen
+ * towns should not have to choose — but every row past the eighth is paid
+ * for in pitch: drawRows tightens the spacing and shrinks the type by the
+ * same factor, and the wizard warns before it happens. */
+const COMFY_CITIES = 8;
+const MAX_CITIES = 15;
 
 const DEDICATIONS = ['לעילוי נשמת', 'לזכר', 'לזכרו של', 'לזכרה של'];
 const VERSES = [
@@ -1468,14 +1474,20 @@ function drawRows(rows) {
   ctx.textBaseline = 'alphabetic';
 
   // With fewer cities the rows spread a little and stay vertically centered
-  // between the headers and the plaque.
-  const top = 492, bottom = 1042;
-  const rowH = rows.length > 1
-    ? Math.min(78, (bottom - top) / (rows.length - 1))
-    : 0;
-  const startY = rows.length > 1
-    ? top + ((bottom - top) - rowH * (rows.length - 1)) / 2
+  // between the headers and the plaque. Past COMFY_CITIES the band is full,
+  // so it first borrows the small margins it has above and below, and then
+  // the rows tighten: 78 is the pitch the type was drawn for, and everything
+  // that scales with a row — type, lozenge, dotted rule — shrinks by the
+  // same ratio, so a crowded board reads as a denser version of the design
+  // instead of a pile of overlapping lines.
+  const n = rows.length;
+  const tight = n > COMFY_CITIES;
+  const top = tight ? 476 : 492, bottom = tight ? 1050 : 1042;
+  const rowH = n > 1 ? Math.min(78, (bottom - top) / (n - 1)) : 0;
+  const startY = n > 1
+    ? top + ((bottom - top) - rowH * (n - 1)) / 2
     : (top + bottom) / 2;
+  const dens = n > 1 ? Math.min(1, rowH / 78) : 1;
 
   const cols = [
     { nameX: 1168, timeX: 858, key: 'entry' },
@@ -1489,7 +1501,7 @@ function drawRows(rows) {
     for (const col of cols) {
       const x0 = Math.min(col.timeX, col.nameX) - 48;
       const x1 = Math.max(col.timeX, col.nameX) + 48;
-      const box = { x: x0, y: y - 42, w: x1 - x0, h: 66 };
+      const box = { x: x0, y: y - 42 * dens, w: x1 - x0, h: 66 * dens };
       const lums = sliceLum(box.x, box.y, box.w, box.h, SLICES);
       box.alphas = lums.map((_, k) =>
         lumToAlpha(Math.min(lums[k], lums[Math.max(0, k - 1)], lums[Math.min(SLICES - 1, k + 1)])));
@@ -1503,28 +1515,29 @@ function drawRows(rows) {
     for (const col of cols) {
       ctx.save();
       ctx.shadowColor = 'rgba(' + T.cream + ',0.95)';
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = Math.max(5, Math.round(8 * dens));
       ctx.fillStyle = T.ink;
 
       ctx.direction = 'rtl';
       ctx.textAlign = 'right';
-      const nSize = fitFont(row.name, wBody(), fBody(), sB(S_NAME), 190);
+      const nSize = fitFont(row.name, wBody(), fBody(),
+        Math.round(sB(S_NAME) * dens), 190);
       ctx.font = wBody() + ' ' + nSize + 'px ' + fBody();
       ctx.fillText(row.name, col.nameX, y);
 
       ctx.direction = 'ltr';
       ctx.textAlign = 'left';
-      ctx.font = wBody() + ' ' + sB(S_TIME) + 'px ' + fBody();
+      ctx.font = wBody() + ' ' + Math.round(sB(S_TIME) * dens) + 'px ' + fBody();
       ctx.fillText(row[col.key], col.timeX, y);
       ctx.restore();
 
       ctx.save();
       ctx.strokeStyle = 'rgba(185,138,68,0.75)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([2, 7]);
+      ctx.lineWidth = Math.max(1.2, 2 * dens);
+      ctx.setLineDash([2, Math.max(5, 7 * dens)]);
       ctx.beginPath();
-      ctx.moveTo(col.timeX, y + 18);
-      ctx.lineTo(col.nameX, y + 18);
+      ctx.moveTo(col.timeX, y + 18 * dens);
+      ctx.lineTo(col.nameX, y + 18 * dens);
       ctx.stroke();
       ctx.restore();
     }
@@ -2444,9 +2457,30 @@ async function addCustomCity(r, candles) {
   return true;
 }
 
+/* The count line doubles as the warning. Past COMFY_CITIES the board still
+ * prints every city — it just prints them smaller, and a family that picks
+ * twelve towns deserves to know that before they see the result rather than
+ * after. Over MAX_CITIES the count turns into a plain stop, matching the
+ * message collectStep gives when they try to move on. */
 function updateCityCount() {
   const n = $('cityGrid').querySelectorAll('input:checked').length;
-  $('cityCount').textContent = 'נבחרו ' + n + ' מתוך ' + MAX_CITIES + ' אפשריות';
+  const el = $('cityCount');
+  el.textContent = 'נבחרו ' + n + ' מתוך ' + MAX_CITIES + ' אפשריות';
+  const warn = $('cityWarn');
+  el.classList.toggle('over', n > MAX_CITIES);
+  if (n > MAX_CITIES) {
+    warn.className = 'citywarn stop';
+    warn.textContent = 'זה יותר מדי — אפשר לבחור עד ' +
+      MAX_CITIES + ' ערים. הסירו ' + (n - MAX_CITIES) + ' כדי להמשיך.';
+  } else if (n > COMFY_CITIES) {
+    warn.className = 'citywarn show';
+    warn.textContent = '⚠ מעל ' + COMFY_CITIES + ' ערים הלוח מצטופף: השורות ' +
+      'מתקרבות זו לזו והכתב קטן, וככל שתוסיפו עוד — כך ייקטן. עד ' +
+      MAX_CITIES + ' ערים אפשר, וזה עובד — פשוט כדאי לדעת מראש.';
+  } else {
+    warn.className = 'citywarn';
+    warn.textContent = '';
+  }
 }
 
 const STEP_TITLES = [
