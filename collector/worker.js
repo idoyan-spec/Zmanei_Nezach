@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = [
 /* Closed vocabularies. Anything arriving that is not on these lists is
  * dropped rather than stored — a collector that writes whatever it is handed
  * is one bug away from being a place personal text ends up. */
-const PATTERNS = ['mist', 'halo', 'bloom', 'waves', 'dunes', 'strata', 'aurora', 'veins', 'orbit', 'arch'];
+const PATTERNS = ['mist', 'clouds', 'haze', 'bokeh', 'sky', 'halo', 'bloom', 'waves', 'dunes', 'strata', 'aurora', 'veins', 'orbit', 'arch'];
 const PALETTES = ['navy', 'olive', 'stone', 'amber', 'sage', 'tchelet', 'wine', 'rose',
                   'plum', 'forest', 'slate', 'sand', 'midnight', 'charcoal'];
 const FONTS = ['classic', 'modern', 'festive', 'soft', 'stone'];

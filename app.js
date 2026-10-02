@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-18 15:05 v11 up-to-15-cities';
+const BUILD = '2026-10-02 12:00 v12 soft-designs-two-tones-quick-edit';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -100,6 +100,21 @@ function wash(c, cx, cy, rx, ry, color, a, rnd, o) {
       disc(c, cx + Math.cos(ang) * rx * d * k, cy + Math.sin(ang) * ry * d * k,
         rx * pr * k, ry * pr * k, color, al * (0.26 + rnd() * 0.30));
     }
+  }
+}
+
+/* A cumulus: a row of billows that swell toward the middle over a broad,
+ * flatter base. Every part of it is a disc(), so it has no outline at all —
+ * the silhouette is only where the pigment thins out. */
+function cloud(c, cx, cy, cw, ch, color, a, rnd) {
+  disc(c, cx, cy + ch * 0.18, cw * 0.62, ch * 0.55, color, a * 0.62);
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const swell = 0.45 + 0.55 * Math.sin(Math.PI * t);
+    const r = ch * swell * (0.78 + rnd() * 0.40);
+    const x = cx + (t - 0.5) * cw * 0.95 + (rnd() * 2 - 1) * cw * 0.04;
+    disc(c, x, cy - r * 0.28, r * 1.12, r, color, a * (0.42 + rnd() * 0.22));
   }
 }
 
@@ -302,6 +317,117 @@ const PATTERNS = {
       });
       mottle(c, w, h, P, rnd, 0.07);
       clearCentre(c, w, h, P, 0.46);
+    }
+  },
+
+  /* The four soft designs. Families asked for less rigid boards — "clouds,
+   * fog, soft shapes" — so none of these carries a frame, a ruled edge or a
+   * band with a drawn top line: every mass is built only out of disc(), which
+   * has no edge anywhere, and the light falls through rather than across. */
+  clouds: {
+    label: 'עננים', hint: 'ענני צמר רכים', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      const sky = c.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, hexA(P.c2, P.dark ? 0.55 : 0.42));
+      sky.addColorStop(0.55, hexA(P.c2, 0.06));
+      sky.addColorStop(1, hexA(P.c1, P.dark ? 0.40 : 0.30));
+      c.fillStyle = sky;
+      c.fillRect(0, 0, w, h);
+      mixed(c, P, function () {
+        [[0.10, 0.10, 0.62, 0.20, P.c1, 0.62],
+         [0.86, 0.05, 0.56, 0.17, P.c4, 0.46],
+         [0.94, 0.30, 0.34, 0.12, P.c2, 0.50],
+         [0.04, 0.94, 0.70, 0.22, P.c2, 0.62],
+         [0.70, 1.00, 0.80, 0.24, P.c1, 0.58],
+         [0.40, 0.88, 0.30, 0.10, P.c4, 0.36]
+        ].forEach(function (s) {
+          cloud(c, s[0] * w, s[1] * h, s[2] * w, s[3] * h, s[4], s[5], rnd);
+        });
+      });
+      /* the lit crowns, so each cloud is a volume and not a stain */
+      [[0.12, 0.06, 0.40, 0.10], [0.82, 0.01, 0.36, 0.09],
+       [0.10, 0.88, 0.44, 0.10], [0.72, 0.93, 0.50, 0.11]].forEach(function (s) {
+        disc(c, s[0] * w, s[1] * h, s[2] * w, s[3] * h, P.glow, P.dark ? 0.16 : 0.55);
+      });
+      mottle(c, w, h, P, rnd, 0.04);
+      clearCentre(c, w, h, P, 0.40);
+    }
+  },
+
+  haze: {
+    label: 'ערפל בוקר', hint: 'שכבות אדים', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      /* a low sun behind the fog, and the fog lying across it in long,
+         thin, overlapping veils — each one wider than the board */
+      disc(c, w * 0.70, h * 0.22, w * 0.46, h * 0.40, P.glow, P.dark ? 0.30 : 0.85);
+      disc(c, w * 0.70, h * 0.22, w * 0.14, h * 0.13, P.c3, P.dark ? 0.30 : 0.34);
+      mixed(c, P, function () {
+        const cols = [P.c2, P.c1, P.c4, P.c2, P.c1, P.c2, P.c4];
+        [0.04, 0.17, 0.30, 0.68, 0.80, 0.92, 1.02].forEach(function (t, i) {
+          const cx = w * (0.15 + rnd() * 0.7);
+          wash(c, cx, h * t, w * (0.70 + rnd() * 0.30), h * (0.09 + rnd() * 0.05),
+            cols[i], 0.30 + rnd() * 0.18, rnd, { puffs: 12, layers: 3 });
+        });
+        wash(c, w * 0.5, h * 1.05, w * 0.8, h * 0.22, P.c1, 0.50, rnd, { puffs: 8, layers: 2 });
+      });
+      mottle(c, w, h, P, rnd, 0.04);
+      clearCentre(c, w, h, P, 0.36);
+    }
+  },
+
+  bokeh: {
+    label: 'אורות רכים', hint: 'עיגולי אור מטושטשים', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      mixed(c, P, function () {
+        wash(c, w * 0.02, h * 0.04, w * 0.50, h * 0.36, P.c2, 0.52, rnd, { puffs: 8, layers: 2 });
+        wash(c, w * 0.98, h * 0.98, w * 0.52, h * 0.38, P.c1, 0.52, rnd, { puffs: 8, layers: 2 });
+        /* round lights out of focus, kept off the middle where the type is */
+        const cols = [P.c1, P.c2, P.c4, P.c3];
+        for (let i = 0; i < 26; i++) {
+          let x, y;
+          do { x = rnd(); y = rnd(); } while (Math.abs(x - 0.5) < 0.30 && Math.abs(y - 0.52) < 0.34);
+          const r = w * (0.03 + rnd() * 0.075);
+          disc(c, x * w, y * h, r, r, cols[i % 4], 0.30 + rnd() * 0.36);
+        }
+      });
+      /* a few that catch the light */
+      for (let i = 0; i < 9; i++) {
+        let x, y;
+        do { x = rnd(); y = rnd(); } while (Math.abs(x - 0.5) < 0.32 && Math.abs(y - 0.52) < 0.36);
+        const r = w * (0.02 + rnd() * 0.05);
+        disc(c, x * w, y * h, r, r, P.glow, P.dark ? 0.22 : 0.60);
+      }
+      mottle(c, w, h, P, rnd, 0.04);
+      clearCentre(c, w, h, P, 0.34);
+    }
+  },
+
+  sky: {
+    label: 'רקיע', hint: 'שמיים ואור מבעד לענן', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      const g = c.createLinearGradient(0, 0, w * 0.3, h);
+      g.addColorStop(0, hexA(P.c1, P.dark ? 0.75 : 0.62));
+      g.addColorStop(0.45, hexA(P.c2, 0.30));
+      g.addColorStop(1, hexA(P.c4, P.dark ? 0.40 : 0.34));
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      /* light breaking through from the upper right */
+      disc(c, w * 0.88, h * 0.06, w * 0.62, h * 0.52, P.glow, P.dark ? 0.32 : 0.78);
+      mixed(c, P, function () {
+        /* long wisps drawn on the slant, the way high cloud lies */
+        c.save();
+        c.translate(w / 2, h / 2);
+        c.rotate(-0.16);
+        c.translate(-w / 2, -h / 2);
+        [[0.30, 0.10, P.c2], [0.18, 0.24, P.c4], [0.70, 0.84, P.c2],
+         [0.40, 0.95, P.c1], [0.85, 0.70, P.c4]].forEach(function (s) {
+          wash(c, w * s[0], h * s[1], w * (0.48 + rnd() * 0.22), h * (0.05 + rnd() * 0.04),
+            s[2], 0.50 + rnd() * 0.20, rnd, { puffs: 10, layers: 3 });
+        });
+        c.restore();
+      });
+      mottle(c, w, h, P, rnd, 0.05);
+      clearCentre(c, w, h, P, 0.40);
     }
   },
 
@@ -665,6 +791,32 @@ const PALETTE_KEYS = Object.keys(PALETTES);
 function patternOf(key) { return PATTERNS[key] || PATTERNS.mist; }
 function paletteOf(key) { return PALETTES[key] || PALETTES.navy; }
 
+/* Two-tone boards. The first palette keeps everything that has to stay
+ * legible — paper, ink, plaque, gold, the lozenge cream — and the second one
+ * lends the painted masses: its two body notes take over c2 and c4, which is
+ * where every pattern puts its second colour and its overlaps. A light and a
+ * dark palette cannot be mixed: under `screen` the light one's notes would
+ * bleach the dark paper, so the wizard only offers partners of the same kind. */
+function canBlend(k1, k2) {
+  return !!(k2 && k2 !== k1 && PALETTES[k1] && PALETTES[k2] &&
+    !PALETTES[k1].dark === !PALETTES[k2].dark);
+}
+
+const blendCache = {};
+function paletteFor(k1, k2) {
+  const A = paletteOf(k1);
+  if (!canBlend(k1, k2)) return A;
+  const id = k1 + '+' + k2;
+  if (!blendCache[id]) {
+    const B = PALETTES[k2];
+    blendCache[id] = Object.assign({}, A, {
+      c2: B.c1, c4: B.c2,
+      sw: [A.sw[0], B.sw[0]]
+    });
+  }
+  return blendCache[id];
+}
+
 /* ---------- painting ---------- */
 
 /* paper base — a broad diagonal wash, never a flat fill */
@@ -753,8 +905,8 @@ function hashKey(s) {
 /* Renders one design at any size. The pattern draws in board coordinates and
  * the context is scaled, so a 220px gallery tile and the 1254px export come
  * out of exactly the same code. */
-function paintDesign(c, size, patternKey, paletteKey) {
-  const pat = patternOf(patternKey), P = paletteOf(paletteKey);
+function paintDesign(c, size, patternKey, paletteKey, palette2Key) {
+  const pat = patternOf(patternKey), P = paletteFor(paletteKey, palette2Key);
   c.save();
   c.scale(size / W, size / H);
   paintPaper(c, W, H, P);
@@ -770,11 +922,12 @@ function paintDesign(c, size, patternKey, paletteKey) {
 /* one-entry cache: the board is redrawn every week with the same design */
 let bgCache = { key: '', canvas: null };
 function boardBackground() {
-  const key = designKey() + '|' + paletteKeyOf();
+  const p2 = settings && settings.palette2;
+  const key = designKey() + '|' + paletteKeyOf() + '|' + (p2 || '');
   if (bgCache.key === key && bgCache.canvas) return bgCache.canvas;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
-  paintDesign(cv.getContext('2d'), W, designKey(), paletteKeyOf());
+  paintDesign(cv.getContext('2d'), W, designKey(), paletteKeyOf(), p2);
   bgCache = { key: key, canvas: cv };
   return cv;
 }
@@ -853,7 +1006,18 @@ const VERSES = [
 
 /* Base optical sizes, calibrated for the classic pair; every other pair
  * multiplies these by its own scale. */
-const S_TITLE = 104, S_SUB = 48, S_HEAD = 52, S_NAME = 38, S_TIME = 42;
+const S_TITLE = 104, S_SUB = 48, S_HEAD = 52, S_NAME = 42, S_TIME = 47;
+
+/* How far the column headers and the rows climb toward the title on a
+ * crowded board. Up to COMFY_CITIES nothing moves; past it the whole block
+ * rises by up to LIFT_MAX px, so the extra rows are paid for with the empty
+ * band under the subtitle before any of them have to shrink. */
+const LIFT_MAX = 64;
+function listLift(n) {
+  if (n <= COMFY_CITIES) return 0;
+  const t = Math.min(1, (n - COMFY_CITIES) / (MAX_CITIES - COMFY_CITIES));
+  return Math.round(LIFT_MAX * (0.45 + 0.55 * t));
+}
 
 function fontPair() {
   return FONT_PAIRS[(settings && settings.fontPair)] || FONT_PAIRS.classic;
@@ -926,6 +1090,7 @@ function migrateSettings(s) {
     if (!PALETTES[s.palette]) s.palette = m[1];
   }
   if (!PALETTES[s.palette]) s.palette = 'navy';
+  if (!canBlend(s.palette, s.palette2)) delete s.palette2;
   delete s.tone;                        // the CSS-filter axis is gone
   if (!FONT_PAIRS[s.fontPair]) s.fontPair = 'classic';
   if (!Array.isArray(s.customCities)) s.customCities = [];
@@ -1135,7 +1300,7 @@ const LABELS = {
 
 /* ---------- drawing ---------- */
 
-function tpl() { return paletteOf(settings && settings.palette); }
+function tpl() { return paletteFor(settings && settings.palette, settings && settings.palette2); }
 
 function diamond(x, y, r, color) {
   ctx.beginPath();
@@ -1214,8 +1379,9 @@ function drawTitle(title, subtitle) {
 }
 
 // Column headers are always drawn by code (the backgrounds carry no text).
-function drawHeaders(rightLabel, leftLabel) {
+function drawHeaders(rightLabel, leftLabel, lift) {
   const T = tpl();
+  lift = lift || 0;
   ctx.save();
   ctx.direction = 'rtl';
   ctx.textAlign = 'center';
@@ -1223,7 +1389,7 @@ function drawHeaders(rightLabel, leftLabel) {
   // adaptive backdrop first — invisible on clean paper, covers busy art
   const SLICES = 14;
   [[1020], [240]].forEach(([cx]) => {
-    const box = { x: cx - 190, y: 352, w: 380, h: 84 };
+    const box = { x: cx - 190, y: 352 - lift, w: 380, h: 84 };
     const lums = sliceLum(box.x, box.y, box.w, box.h, SLICES);
     box.alphas = lums.map((_, k) =>
       lumToAlpha(Math.min(lums[k], lums[Math.max(0, k - 1)], lums[Math.min(SLICES - 1, k + 1)])));
@@ -1236,16 +1402,16 @@ function drawHeaders(rightLabel, leftLabel) {
     ctx.shadowColor = 'rgba(0,0,0,0.12)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 2;
-    ctx.fillText(label, cx, 408);
+    ctx.fillText(label, cx, 408 - lift);
     ctx.shadowColor = 'transparent';
     const w = ctx.measureText(label).width;
     ctx.strokeStyle = T.gold;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(cx - w / 2, 428);
-    ctx.lineTo(cx + w / 2, 428);
+    ctx.moveTo(cx - w / 2, 428 - lift);
+    ctx.lineTo(cx + w / 2, 428 - lift);
     ctx.stroke();
-    diamond(cx, 428, 5, T.gold);
+    diamond(cx, 428 - lift, 5, T.gold);
   });
   ctx.restore();
 }
@@ -1255,10 +1421,13 @@ function drawHeaders(rightLabel, leftLabel) {
  * melts into the paper instead of sitting in a hard-edged window, then
  * warmed with a whisper of the paper tone so its colors sit with the art.
  * Shared by the board (full size) and the wizard's live preview. */
-function paintPhoto(octx, cw, ch, img, frame, offsetPct, zoomPct, creamRGB) {
+function paintPhoto(octx, cw, ch, img, frame, offsetPct, zoomPct, creamRGB, offsetXPct) {
   const scale = Math.max(frame.w / img.width, frame.h / img.height) * (zoomPct / 100);
   const dw = img.width * scale, dh = img.height * scale;
-  const sx = frame.x + (frame.w - dw) / 2;
+  /* horizontal pan works like the vertical one: it slides the crop across
+   * whatever the photo has beyond the frame (50 = centred, the old layout) */
+  const ox = offsetXPct != null ? offsetXPct : 50;
+  const sx = frame.x - Math.max(0, dw - frame.w) * (ox / 100);
   const sy = frame.y - Math.max(0, dh - frame.h) * (offsetPct / 100);
   octx.save();
   octx.beginPath();
@@ -1304,7 +1473,8 @@ function drawPhoto() {
   paintPhoto(octx, W, H, photoImage, PHOTO_FRAME,
     settings.photoOffset != null ? settings.photoOffset : 25,
     settings.photoZoom || 100,
-    tpl().cream);
+    tpl().cream,
+    settings.photoOffsetX != null ? settings.photoOffsetX : 50);
   ctx.drawImage(off, 0, 0);
 }
 
@@ -1482,12 +1652,14 @@ function drawRows(rows) {
   // instead of a pile of overlapping lines.
   const n = rows.length;
   const tight = n > COMFY_CITIES;
-  const top = tight ? 476 : 492, bottom = tight ? 1050 : 1042;
-  const rowH = n > 1 ? Math.min(78, (bottom - top) / (n - 1)) : 0;
+  // A crowded board also starts higher (listLift): the headers rise with the
+  // rows, and the band freed under the subtitle buys the extra rows room.
+  const top = (tight ? 476 : 492) - listLift(n), bottom = tight ? 1050 : 1042;
+  const rowH = n > 1 ? Math.min(80, (bottom - top) / (n - 1)) : 0;
   const startY = n > 1
     ? top + ((bottom - top) - rowH * (n - 1)) / 2
     : (top + bottom) / 2;
-  const dens = n > 1 ? Math.min(1, rowH / 78) : 1;
+  const dens = n > 1 ? Math.min(1, rowH / 80) : 1;
 
   const cols = [
     { nameX: 1168, timeX: 858, key: 'entry' },
@@ -1569,7 +1741,7 @@ function drawBoard(plan, rows) {
   ctx.drawImage(boardBackground(), 0, 0, W, H);
   drawPhoto();
   drawTitle(labels.title, plan.name);
-  drawHeaders(labels.right, labels.left);
+  drawHeaders(labels.right, labels.left, listLift(rows.length));
   drawPlaque();
   drawRows(rows);
   drawContact();
@@ -1782,6 +1954,7 @@ function defaultDraft() {
     v: 3,
     photo: '',
     photoOffset: 25,
+    photoOffsetX: 50,
     photoZoom: 100,
     dedication: DEDICATIONS[0],
     name: '',
@@ -1849,8 +2022,56 @@ function openWizard(prefill) {
   // a backup is only meaningful once there is something to back up
   $('wizExport').style.display = prefill ? 'inline-block' : 'none';
   $('wizTitle').textContent = prefill ? 'עריכת ההגדרות' : 'יצירת לוח שבת אישי';
+  /* Editing is not a second run through the wizard. With a board already
+   * set up every step is reachable directly from the chips, and "save" is
+   * on every step — changing the font should be two taps, not six screens. */
+  wizardState.editing = !!prefill;
+  $('wizard').classList.toggle('editing', !!prefill);
+  $('wizSave').style.display = prefill ? 'inline-flex' : 'none';
+  $('stepNote').textContent = prefill
+    ? 'בחרו מה לשנות — אין צורך לעבור שוב על כל השלבים. ✓ שמירה זמינה בכל שלב.'
+    : 'אפשר לשנות הכול בכל רגע דרך ⚙️ הגדרות';
+  renderStepChips();
   fillWizardFields();
   showStep(0);
+}
+
+function renderStepChips() {
+  const box = $('wizJump');
+  box.innerHTML = '';
+  STEP_TITLES.forEach(function (t, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'jump';
+    b.dataset.step = i;
+    b.textContent = t;
+    b.addEventListener('click', function () { jumpToStep(i); });
+    box.appendChild(b);
+  });
+}
+
+/* Leaving a step keeps what was entered on it. An error on the step being
+ * left (an empty name, say) holds the user there, exactly as "next" does. */
+function jumpToStep(i) {
+  if (i === wizardState.step) return;
+  const err = collectStep(wizardState.step);
+  if (err) { $('wizErr').textContent = err; return; }
+  showStep(i);
+}
+
+/* The whole draft, checked at the moment of saving — with steps reachable in
+ * any order, "it passed when the step was left" no longer covers all of it. */
+function validateDraft(d) {
+  if (!d.name) return { step: 1, err: 'כתבו את שם יקירכם כדי להמשיך' };
+  if (!d.cities || !d.cities.length) return { step: 3, err: 'בחרו לפחות עיר אחת' };
+  if (d.cities.length > MAX_CITIES) return { step: 3, err: 'אפשר לבחור עד ' + MAX_CITIES + ' ערים' };
+  return null;
+}
+
+function wizardSave() {
+  const err = collectStep(wizardState.step);
+  if (err) { $('wizErr').textContent = err; return; }
+  finishWizard();
 }
 
 function closeWizardToBoard() {
@@ -1897,6 +2118,7 @@ function fillWizardFields() {
 
   // photo preview
   $('photoOffset').value = d.photoOffset != null ? d.photoOffset : 25;
+  $('photoOffsetX').value = d.photoOffsetX != null ? d.photoOffsetX : 50;
   $('photoZoom').value = d.photoZoom || 100;
   refreshPhotoPreview();
 
@@ -1985,13 +2207,41 @@ function renderDesignGrid() {
     label.appendChild(cap);
     grid.appendChild(label);
   });
-  repaintDesignGrid(d.palette);
+  repaintDesignGrid();
 }
 
-function repaintDesignGrid(paletteKey) {
+function repaintDesignGrid() {
+  const d = wizardState.draft;
   $('tplGrid').querySelectorAll('canvas.tileart').forEach(function (cv) {
-    paintDesign(cv.getContext('2d'), TILE_PX, cv.dataset.pattern, paletteKey);
+    paintDesign(cv.getContext('2d'), TILE_PX, cv.dataset.pattern, d.palette, d.palette2);
   });
+}
+
+function swatchLabel(group, key, P, checked, onPick, disabled) {
+  const label = document.createElement('label');
+  label.className = 'swatch' + (disabled ? ' off' : '');
+  const rb = document.createElement('input');
+  rb.type = 'radio';
+  rb.name = group;
+  rb.value = key;
+  rb.checked = checked;
+  rb.disabled = !!disabled;
+  if (checked) label.classList.add('checked');
+  rb.addEventListener('change', function () {
+    label.parentNode.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
+    label.classList.add('checked');
+    onPick(key);
+  });
+  const dot = document.createElement('span');
+  dot.className = 'dot' + (P ? '' : ' none');
+  if (P) dot.style.background = 'linear-gradient(135deg,' + P.sw[0] + ' 0 50%,' + P.sw[1] + ' 50% 100%)';
+  const nm = document.createElement('span');
+  nm.className = 'swname';
+  nm.textContent = P ? P.label : 'ללא — גוון אחד';
+  label.appendChild(rb);
+  label.appendChild(dot);
+  label.appendChild(nm);
+  return label;
 }
 
 function renderPaletteGrid() {
@@ -1999,31 +2249,32 @@ function renderPaletteGrid() {
   const grid = $('toneGrid');
   grid.innerHTML = '';
   PALETTE_KEYS.forEach(function (key) {
-    const P = PALETTES[key];
-    const label = document.createElement('label');
-    label.className = 'swatch';
-    const rb = document.createElement('input');
-    rb.type = 'radio';
-    rb.name = 'palettePick';
-    rb.value = key;
-    rb.checked = d.palette === key;
-    if (rb.checked) label.classList.add('checked');
-    rb.addEventListener('change', function () {
-      grid.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
-      label.classList.add('checked');
-      d.palette = key;
-      repaintDesignGrid(key);
-    });
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.style.background = 'linear-gradient(135deg,' + P.sw[0] + ' 0 50%,' + P.sw[1] + ' 50% 100%)';
-    const nm = document.createElement('span');
-    nm.className = 'swname';
-    nm.textContent = P.label;
-    label.appendChild(rb);
-    label.appendChild(dot);
-    label.appendChild(nm);
-    grid.appendChild(label);
+    grid.appendChild(swatchLabel('palettePick', key, PALETTES[key], d.palette === key, function (k) {
+      d.palette = k;
+      if (!canBlend(d.palette, d.palette2)) delete d.palette2;
+      renderPalette2Grid();
+      repaintDesignGrid();
+    }));
+  });
+  renderPalette2Grid();
+}
+
+/* The optional second tone. Only partners of the same kind (light with
+ * light, dark with dark) are offered — see canBlend(). */
+function renderPalette2Grid() {
+  const d = wizardState.draft;
+  const grid = $('tone2Grid');
+  grid.innerHTML = '';
+  grid.appendChild(swatchLabel('palette2Pick', '', null, !d.palette2, function () {
+    delete d.palette2;
+    repaintDesignGrid();
+  }));
+  PALETTE_KEYS.forEach(function (key) {
+    if (key === d.palette || !canBlend(d.palette, key)) return;
+    grid.appendChild(swatchLabel('palette2Pick', key, PALETTES[key], d.palette2 === key, function (k) {
+      d.palette2 = k;
+      repaintDesignGrid();
+    }));
   });
 }
 
@@ -2046,7 +2297,8 @@ function refreshPhotoPreview() {
     pctx.fillRect(0, 0, c.width, c.height);
     paintPhoto(pctx, c.width, c.height, img,
       { x: 10, y: 10, w: c.width - 20, h: c.height - 20 },
-      Number($('photoOffset').value), Number($('photoZoom').value), '243,236,220');
+      Number($('photoOffset').value), Number($('photoZoom').value), '243,236,220',
+      Number($('photoOffsetX').value));
   };
   img.src = d.photo;
 }
@@ -2065,8 +2317,16 @@ function renderCityGrid() {
     cb.value = c.key;
     cb.checked = d.cities.includes(c.key);
     if (cb.checked) label.classList.add('checked');
+    /* The draft is updated on every tick, not only when the step is left.
+     * The grid is rebuilt from d.cities whenever a city is added by search or
+     * renamed, and while the ticks lived only in the DOM that rebuild quietly
+     * reverted every choice made since the step opened — "I pick one city
+     * and the ones I picked before change". */
     cb.addEventListener('change', () => {
       label.classList.toggle('checked', cb.checked);
+      const at = d.cities.indexOf(c.key);
+      if (cb.checked && at < 0) d.cities.push(c.key);
+      if (!cb.checked && at > -1) d.cities.splice(at, 1);
       updateCityCount();
     });
     top.appendChild(cb);
@@ -2503,6 +2763,17 @@ function showStep(i) {
   $('wizStepNum').textContent = 'שלב ' + (i + 1) + ' מתוך ' + WSTEPS;
   $('wizStepName').textContent = STEP_TITLES[i] || '';
   $('wizBar').style.width = ((i + 1) / WSTEPS * 100).toFixed(1) + '%';
+  $('wizJump').querySelectorAll('.jump').forEach(function (b) {
+    b.classList.toggle('on', Number(b.dataset.step) === i);
+  });
+  if (wizardState.editing) {
+    // in edit mode "next" is the secondary action — save is the main one
+    $('wizNext').style.display = i === WSTEPS - 1 ? 'none' : 'inline-flex';
+    $('wizNext').className = 'btn-ghost';
+  } else {
+    $('wizNext').style.display = 'inline-flex';
+    $('wizNext').className = 'btn-primary';
+  }
   $('wizard').scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
@@ -2510,6 +2781,7 @@ function collectStep(i) {
   const d = wizardState.draft;
   if (i === 0) {
     d.photoOffset = Number($('photoOffset').value);
+    d.photoOffsetX = Number($('photoOffsetX').value);
     d.photoZoom = Number($('photoZoom').value);
     // photo itself is set on file pick
   } else if (i === 1) {
@@ -2533,6 +2805,9 @@ function collectStep(i) {
     d.template = rb.value;
     const pk = document.querySelector('input[name="palettePick"]:checked');
     d.palette = pk ? pk.value : 'navy';
+    const pk2 = document.querySelector('input[name="palette2Pick"]:checked');
+    if (pk2 && canBlend(d.palette, pk2.value)) d.palette2 = pk2.value;
+    else delete d.palette2;
   } else if (i === 5) {
     const rb = document.querySelector('input[name="fontPick"]:checked');
     if (!rb) return 'בחרו סגנון כתב';
@@ -2548,7 +2823,16 @@ function wizardNext() {
     showStep(wizardState.step + 1);
     return;
   }
-  // finish
+  finishWizard();
+}
+
+function finishWizard() {
+  const bad = validateDraft(wizardState.draft);
+  if (bad) {
+    showStep(bad.step);
+    $('wizErr').textContent = bad.err;
+    return;
+  }
   settings = wizardState.draft;
   try {
     saveSettings(settings);
@@ -2662,7 +2946,11 @@ $('nudgeSave').addEventListener('click', () => { exportSettings(); dismissNudge(
 $('nudgeLater').addEventListener('click', dismissNudge);
 
 $('wizNext').addEventListener('click', wizardNext);
-$('wizPrev').addEventListener('click', () => showStep(Math.max(0, wizardState.step - 1)));
+$('wizPrev').addEventListener('click', () => {
+  collectStep(wizardState.step);      // keep what was typed; errors wait for save
+  showStep(Math.max(0, wizardState.step - 1));
+});
+$('wizSave').addEventListener('click', wizardSave);
 $('wizCancel').addEventListener('click', () => {
   if (settings) { closeWizardToBoard(); }
 });
@@ -2671,6 +2959,10 @@ $('photoDrop').addEventListener('click', () => $('photoFile').click());
 $('photoFile').addEventListener('change', e => handlePhotoFile(e.target.files[0]));
 $('photoOffset').addEventListener('input', () => {
   wizardState.draft.photoOffset = Number($('photoOffset').value);
+  refreshPhotoPreview();
+});
+$('photoOffsetX').addEventListener('input', () => {
+  wizardState.draft.photoOffsetX = Number($('photoOffsetX').value);
   refreshPhotoPreview();
 });
 $('photoZoom').addEventListener('input', () => {
@@ -2709,7 +3001,11 @@ async function boot() {
       settings.template = urlParams.get('tpl') || 'mist';
       settings.fontPair = urlParams.get('font') || 'classic';
       settings.palette = urlParams.get('palette') || 'navy';
+      if (canBlend(settings.palette, urlParams.get('palette2'))) settings.palette2 = urlParams.get('palette2');
       settings.cities = ['jerusalem', 'telaviv', 'haifa', 'beersheva', 'ariel', 'katzrin', 'london'];
+      if (urlParams.get('ncities')) {
+        settings.cities = CITIES.slice(0, Math.min(MAX_CITIES, Number(urlParams.get('ncities')))).map(c => c.key);
+      }
       saveSettings(settings);
     } catch (e) { console.error('demo seed failed', e); }
   }
