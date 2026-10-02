@@ -598,6 +598,17 @@
     height: 26px;
   }
 
+  /* ---- edit mode: jump straight to any step ---- */
+  .wizjump { display: none; flex-wrap: wrap; gap: 7px; justify-content: center; margin: 0 0 14px; }
+  #wizard.editing .wizjump { display: flex; }
+  .wizjump .jump {
+    min-height: 36px; padding: 6px 14px; font-size: 14px; font-weight: 500;
+    background: var(--surface); color: var(--ink-2);
+    border: 1.5px solid var(--line-2); box-shadow: none;
+  }
+  .wizjump .jump:hover { border-color: var(--gold); color: var(--ink); }
+  .wizjump .jump.on { background: var(--gold-tint); border-color: var(--gold); color: var(--ink); font-weight: 700; }
+
   /* ---- cities ---- */
   .citygrid {
     display: grid;
@@ -812,6 +823,9 @@
     width: 40px; height: 40px;
     border-radius: var(--pill);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), var(--sh-1);
+  }
+  .tonegrid .dot.none {
+    background: repeating-linear-gradient(135deg, #fff 0 6px, #ece6d8 6px 12px);
   }
   .tonegrid .swname { font-size: 13.5px; color: var(--ink-2); text-align: center; line-height: 1.35; }
   .tonegrid label.swatch.checked .swname { color: var(--ink); font-weight: 600; }
@@ -1044,7 +1058,8 @@
   <section id="wizard">
     <div class="wizhead">
       <h2 id="wizTitle">יצירת לוח שבת אישי</h2>
-      <div class="stepnote">אפשר לשנות הכול בכל רגע דרך ⚙️ הגדרות</div>
+      <div class="stepnote" id="stepNote">אפשר לשנות הכול בכל רגע דרך ⚙️ הגדרות</div>
+      <div class="wizjump" id="wizJump" role="tablist" aria-label="מעבר ישיר לשלב"></div>
       <div class="wizmeta">
         <span id="wizStepNum">שלב 1 מתוך 6</span>
         <span id="wizStepName">תמונת יקירכם</span>
@@ -1072,10 +1087,15 @@
         <input type="file" id="photoFile" accept="image/*" style="display:none">
         <div id="photoPreviewWrap">
           <canvas id="photoPreviewCanvas" width="400" height="480"></canvas>
-          <div class="hint">כך התמונה תשתלב בלוח — עם דהייה רכה בשוליים</div>
+          <div class="hint">כך התמונה תשתלב בלוח — עם דהייה רכה בשוליים.<br>
+            אם ההזזה לא משנה דבר, הגדילו קצת את הזום — יש לתמונה לאן לזוז רק כשהיא גדולה מהמסגרת.</div>
           <div class="slider">
             <span>מיקום אנכי</span>
             <input type="range" id="photoOffset" min="0" max="100" value="25">
+          </div>
+          <div class="slider">
+            <span>מיקום אופקי</span>
+            <input type="range" id="photoOffsetX" min="0" max="100" value="50">
           </div>
           <div class="slider">
             <span>קרבה (זום)</span>
@@ -1153,8 +1173,13 @@
         <div class="field" style="margin-top:24px; margin-bottom:6px">
           <label>גוון הצבע</label>
           <div class="tonegrid" id="toneGrid"></div>
+        </div>
+        <div class="field" style="margin-top:20px; margin-bottom:6px">
+          <label>שילוב עם גוון שני (לא חובה)</label>
+          <div class="hint" style="margin:0 0 10px">הגוון הראשון קובע את הכתב והלוחית, והשני נמזג לתוך הרקע. גוונים כהים משתלבים רק עם כהים.</div>
+          <div class="tonegrid" id="tone2Grid"></div>
           <div class="hint">
-            10 עיצובים × 14 גוונים × 5 סגנונות כתב — 700 שילובים.
+            14 עיצובים × 14 גוונים, עם או בלי גוון שני, × 5 סגנונות כתב — אלפי שילובים.
             רוצים עיצוב שאינו כאן?
             <a href="mailto:idoyan@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%A2%D7%99%D7%A6%D7%95%D7%91%20%D7%97%D7%93%D7%A9">כתבו לנו</a>
             ונוסיף אותו לגלריה לכולם.
@@ -1179,6 +1204,7 @@
       <button id="wizImport" class="btn-quiet">📂 קובץ הגדרות</button>
       <button id="wizCancel" class="btn-quiet" style="display:none">ביטול</button>
       <button id="wizNext" class="btn-primary">הבא ←</button>
+      <button id="wizSave" class="btn-primary" style="display:none">✓ שמירה ויצירת הלוח</button>
     </div>
   </section>
 
@@ -1240,6 +1266,6 @@
        family: without it a browser that has app.js cached keeps running last
        week's code against this week's index.html. Bump it with BUILD. -->
   <script src="usage.js?v=1"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
