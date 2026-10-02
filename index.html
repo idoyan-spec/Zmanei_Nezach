@@ -816,6 +816,30 @@
   .tonegrid .swname { font-size: 13.5px; color: var(--ink-2); text-align: center; line-height: 1.35; }
   .tonegrid label.swatch.checked .swname { color: var(--ink); font-weight: 600; }
 
+  .tonegrid label.swatch.off { opacity: .32; cursor: not-allowed; }
+  .tonegrid label.swatch.off:hover { background: none; }
+  .tonegrid .dot.none {
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(29,39,67,.05); color: var(--ink-3); font-size: 18px;
+  }
+
+  /* ---- edit-mode step tabs ---- */
+  .wiztabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
+  .wtab {
+    font: inherit; font-size: 14px; cursor: pointer;
+    padding: 6px 13px; border-radius: var(--pill);
+    border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  }
+  .wtab:hover { background: rgba(29,39,67,.05); }
+  .wtab.on { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; }
+
+  .quickedit {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center;
+    margin: -4px 0 12px; font-size: 14px; color: var(--ink-3);
+  }
+  .quickedit button { font-size: 14px; padding: 5px 11px; }
+  .wnav button { white-space: nowrap; }
+
   /* ---- font pairs ---- */
   .fontgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
   .fontgrid label {
@@ -1019,6 +1043,15 @@
       <button id="btnSettings" class="btn-ghost">⚙️ הגדרות</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
+    <!-- one tap to the one thing you want to change, without the whole wizard -->
+    <div class="quickedit">
+      <span>שינוי מהיר:</span>
+      <button class="btn-quiet" data-quick="4">🎨 עיצוב וגוון</button>
+      <button class="btn-quiet" data-quick="5">🔤 כתב</button>
+      <button class="btn-quiet" data-quick="3">📍 ערים</button>
+      <button class="btn-quiet" data-quick="0">🖼️ תמונה</button>
+      <button class="btn-quiet" data-quick="1">✍️ פרטים</button>
+    </div>
 
     <div id="status"></div>
 
@@ -1050,6 +1083,7 @@
         <span id="wizStepName">תמונת יקירכם</span>
       </div>
       <div class="track"><div id="wizBar"></div></div>
+      <div class="wiztabs" id="wizTabs" style="display:none"></div>
     </div>
 
     <div class="wizbody">
@@ -1076,6 +1110,10 @@
           <div class="slider">
             <span>מיקום אנכי</span>
             <input type="range" id="photoOffset" min="0" max="100" value="25">
+          </div>
+          <div class="slider">
+            <span>מיקום אופקי</span>
+            <input type="range" id="photoOffsetX" min="0" max="100" value="50">
           </div>
           <div class="slider">
             <span>קרבה (זום)</span>
@@ -1153,8 +1191,15 @@
         <div class="field" style="margin-top:24px; margin-bottom:6px">
           <label>גוון הצבע</label>
           <div class="tonegrid" id="toneGrid"></div>
+        </div>
+        <div class="field" style="margin-top:18px; margin-bottom:6px">
+          <label>גוון שני לשילוב <span style="font-weight:400; color:var(--ink-3)">(לא חובה)</span></label>
+          <div class="tonegrid" id="toneGrid2"></div>
           <div class="hint">
-            10 עיצובים × 14 גוונים × 5 סגנונות כתב — 700 שילובים.
+            הגוון השני נכנס לצורות שברקע; הנייר, הכתב והלוחית נשארים בגוון הראשון, כך שהקריאוּת לא משתנה.
+          </div>
+          <div class="hint">
+            16 עיצובים × 14 גוונים × 5 סגנונות כתב — ועוד שילובים של שני גוונים.
             רוצים עיצוב שאינו כאן?
             <a href="mailto:idoyan@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%A2%D7%99%D7%A6%D7%95%D7%91%20%D7%97%D7%93%D7%A9">כתבו לנו</a>
             ונוסיף אותו לגלריה לכולם.
@@ -1178,6 +1223,7 @@
       <button id="wizExport" class="btn-quiet" style="display:none">💾 גיבוי</button>
       <button id="wizImport" class="btn-quiet">📂 קובץ הגדרות</button>
       <button id="wizCancel" class="btn-quiet" style="display:none">ביטול</button>
+      <button id="wizSave" class="btn-gold" style="display:none">✓ שמירה</button>
       <button id="wizNext" class="btn-primary">הבא ←</button>
     </div>
   </section>
@@ -1240,6 +1286,6 @@
        family: without it a browser that has app.js cached keeps running last
        week's code against this week's index.html. Bump it with BUILD. -->
   <script src="usage.js?v=1"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

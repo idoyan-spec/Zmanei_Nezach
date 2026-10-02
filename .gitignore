@@ -26,3 +26,6 @@ collector/.wrangler/
 collector/node_modules/
 
 .runtime/
+
+# reference material from the user (real people) — local only, never published
+SOURCES/

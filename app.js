@@ -1,7 +1,7 @@
 /* לוח שבת לזכרם — כלי אישי ליצירת לוח זמני שבת לזכר יקיריכם */
 'use strict';
 
-const BUILD = '2026-09-18 15:05 v11 up-to-15-cities';
+const BUILD = '2026-10-02 14:58 v12 soft-designs-quick-edit';
 
 const W = 1254, H = 1254;
 const SETTINGS_KEY = 'memorialBoard.v1';
@@ -146,13 +146,15 @@ function veil(c, w, h, P, rnd) {
   c.save();
   c.globalCompositeOperation = P.dark ? 'screen' : 'multiply';
   const g = c.createLinearGradient(0, 0, w * 0.6, h);
-  g.addColorStop(0, hexA(P.c2, P.dark ? 0.12 : 0.15));
-  g.addColorStop(0.5, hexA(P.c4, P.dark ? 0.07 : 0.09));
-  g.addColorStop(1, hexA(P.c1, P.dark ? 0.12 : 0.16));
+  /* kept faint: with the richer masses a stronger veil greyed the paper,
+     and clean warm paper is what makes the colour around it look clean */
+  g.addColorStop(0, hexA(P.c2, P.dark ? 0.12 : 0.07));
+  g.addColorStop(0.5, hexA(P.c4, P.dark ? 0.07 : 0.03));
+  g.addColorStop(1, hexA(P.c1, P.dark ? 0.12 : 0.08));
   c.fillStyle = g;
   c.fillRect(0, 0, w, h);
   c.restore();
-  mottle(c, w, h, P, rnd, P.dark ? 0.045 : 0.055);
+  mottle(c, w, h, P, rnd, P.dark ? 0.045 : 0.035);
 }
 
 /* One light source, from the upper right where the Hebrew eye enters the
@@ -259,6 +261,48 @@ function vein(c, x0, y0, x1, y1, wid, color, a, rnd) {
   c.restore();
 }
 
+/* True blur, scaled to whatever size the design is being painted at - a
+ * canvas filter works in device pixels and ignores the transform, so a 30px
+ * blur meant for the 1254px board would wash a 260px gallery tile out
+ * entirely. Browsers without canvas filters just get the unblurred shapes,
+ * which are already soft. */
+function softly(c, px, fn) {
+  const k = c.getTransform ? Math.abs(c.getTransform().a) : 1;
+  c.save();
+  if (BLUR_OK) c.filter = 'blur(' + Math.max(0.4, px * k).toFixed(1) + 'px)';
+  fn();
+  c.restore();
+}
+
+/* A cumulus: discs along a line, biggest in the middle, sitting on a flat-ish
+ * base - which is what makes a cluster of circles read as a cloud. */
+function cloud(c, cx, cy, wid, col, a, rnd) {
+  /* a mound, not a row: a broad base of wide discs, then smaller, rounder
+     ones stacked on top and toward the middle — one row of equal discs on a
+     shared baseline is what read as a flying saucer */
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5 - 0.5;
+    const r = wid * (0.20 + rnd() * 0.05);
+    disc(c, cx + t * wid * 0.80, cy, r * 1.25, r * 0.70, col, a * 0.85);
+  }
+  for (let i = 0; i < 5; i++) {
+    const t = (i / 4 - 0.5) * 0.75 + (rnd() - 0.5) * 0.08;
+    const r = wid * (0.17 + (0.5 - Math.abs(t)) * 0.26 + rnd() * 0.04);
+    disc(c, cx + t * wid, cy - wid * (0.07 + (0.5 - Math.abs(t)) * 0.16), r, r, col, a);
+  }
+}
+
+/* one out-of-focus light: a faint body with a slightly brighter rim */
+function bokeh(c, x, y, r, col, a) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, hexA(col, a * 0.55));
+  g.addColorStop(0.78, hexA(col, a * 0.75));
+  g.addColorStop(0.93, hexA(col, a));
+  g.addColorStop(1, hexA(col, 0));
+  c.fillStyle = g;
+  c.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
 /* The board carries a portrait, a title, two columns of times and a plaque.
  * Rather than time every pattern to tiptoe around that, each one paints
  * boldly and then has the middle eased back — which is exactly the
@@ -283,6 +327,57 @@ function clearCentre(c, w, h, P, strength) {
  * where the depth comes from. */
 
 const PATTERNS = {
+  /* Modelled on the board families actually loved: warm, clean paper, and a
+   * single watercolour mist that rises from the bottom and melts behind the
+   * portrait. One hue family only — c1, c2, deep — because that board has no
+   * second colour at all, and that restraint is most of why it is pleasant.
+   * The edge varies between crisp and lost (blur 3..22), which is what makes
+   * a wash read as watercolour rather than an airbrushed gradient. */
+  rising: {
+    label: 'ערפל עולה', hint: 'ענן מים רך מלמטה', frame: 'double',
+    draw: function (c, w, h, P, rnd) {
+      mixed(c, P, function () {
+        const g = c.createLinearGradient(0, h * 0.45, 0, h);
+        g.addColorStop(0, hexA(P.c2, 0));
+        g.addColorStop(0.55, hexA(P.c2, 0.22));
+        g.addColorStop(1, hexA(P.c1, 0.50));
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+      });
+      /* the billows: higher at the sides, low in the middle where they pass
+         behind the portrait and the plaque */
+      for (let i = 0; i < 22; i++) {
+        const x = w * (rnd() * 1.1 - 0.05);
+        const side = Math.abs(x / w - 0.5) * 2;
+        const y = h * (1.0 - (0.10 + rnd() * 0.30) * (0.45 + 0.75 * side));
+        const r = w * (0.08 + rnd() * 0.11);
+        const col = rnd() < 0.6 ? P.c2 : P.c1;
+        const a = 0.30 + rnd() * 0.30;
+        softly(c, 3 + rnd() * 19, function () {
+          mixed(c, P, function () { disc(c, x, y, r, r * 0.78, col, a); });
+        });
+      }
+      /* lifted-out light inside the mass, the way a wet wash is blotted */
+      for (let i = 0; i < 9; i++) {
+        const x = w * rnd(), y = h * (0.80 + rnd() * 0.18), r = w * (0.05 + rnd() * 0.07);
+        softly(c, 12, function () { disc(c, x, y, r, r * 0.6, P.paper[0], 0.55); });
+      }
+      softly(c, 26, function () {
+        mixed(c, P, function () {
+          wash(c, 0, h * 1.02, w * 0.36, h * 0.18, P.deep, 0.34, rnd, { puffs: 8, layers: 2 });
+          wash(c, w, h * 0.98, w * 0.30, h * 0.16, P.c1, 0.36, rnd, { puffs: 8, layers: 2 });
+        });
+      });
+      /* a breath of the same mist high on one side, so the top is not empty */
+      softly(c, 30, function () {
+        mixed(c, P, function () {
+          wash(c, w * 0.02, h * 0.42, w * 0.18, h * 0.10, P.c2, 0.22, rnd, { puffs: 6, layers: 1 });
+        });
+      });
+      mottle(c, w, h, P, rnd, 0.025);
+    }
+  },
+
   mist: {
     label: 'ערפל', hint: 'עננים רכים', frame: 'double',
     draw: function (c, w, h, P, rnd) {
@@ -302,6 +397,178 @@ const PATTERNS = {
       });
       mottle(c, w, h, P, rnd, 0.07);
       clearCentre(c, w, h, P, 0.46);
+    }
+  },
+
+  /* ---- the soft family ----
+   * Five compositions with no edge anywhere: clouds, fog banks, out-of-focus
+   * light, folds of cloth, a dawn sky. They lean on a real blur where the
+   * browser has canvas filters (softly), so the shapes melt instead of
+   * merely fading. Families asked for clouds, mist and soft shapes — every
+   * older design has a line somewhere in it. */
+
+  clouds: {
+    label: 'עננים', hint: 'ענני צמר רכים', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      /* a sky that is coloured at the rim and pales toward the middle */
+      mixed(c, P, function () {
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, hexA(P.c2, 0.70));
+        g.addColorStop(0.32, hexA(P.c2, 0.18));
+        g.addColorStop(0.70, hexA(P.c4, 0.12));
+        g.addColorStop(1, hexA(P.c1, 0.62));
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+      });
+      const banks = [[0.10, 0.10, 0.50], [0.78, 0.05, 0.56], [0.46, 0.20, 0.36],
+                     [0.02, 0.94, 0.62], [0.62, 1.00, 0.70], [0.98, 0.84, 0.40],
+                     [-0.02, 0.52, 0.30], [1.02, 0.46, 0.30]];
+      banks.forEach(function (b) {
+        const cx = b[0] * w, cy = b[1] * h, wid = b[2] * w;
+        const seed = rnd() * 1e9;
+        /* the shaded underside first, in the palette's colour... */
+        softly(c, 22, function () {
+          mixed(c, P, function () { cloud(c, cx, cy + wid * 0.06, wid, P.c1, 0.34, mulberry32(seed)); });
+        });
+        /* ...then the lit body on top, in light, from the same seed so the
+           two silhouettes agree */
+        softly(c, 9, function () { cloud(c, cx - wid * 0.02, cy - wid * 0.02, wid * 0.96, P.glow, P.dark ? 0.30 : 0.90, mulberry32(seed)); });
+      });
+      mottle(c, w, h, P, rnd, 0.04);
+      clearCentre(c, w, h, P, 0.34);
+    }
+  },
+
+  fog: {
+    label: 'ערפל בוקר', hint: 'שכבות ערפל', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      /* long, flat banks of colour laid one over another, then blurred hard,
+         with pale mist drawn back across them so they sit behind it */
+      softly(c, 34, function () {
+        mixed(c, P, function () {
+          const rows = [[0.03, P.c2, 0.70], [0.15, P.c1, 0.50], [0.29, P.c2, 0.26],
+                        [0.71, P.c4, 0.20], [0.83, P.c1, 0.56], [0.95, P.c2, 0.72], [1.04, P.deep, 0.36]];
+          rows.forEach(function (r) {
+            wash(c, w * (0.30 + rnd() * 0.40), h * r[0], w * (0.80 + rnd() * 0.3), h * (0.07 + rnd() * 0.05),
+              r[1], r[2], rnd, { puffs: 9, layers: 2 });
+          });
+        });
+      });
+      softly(c, 30, function () {
+        [0.10, 0.24, 0.78, 0.90].forEach(function (y) {
+          disc(c, w * (0.2 + rnd() * 0.6), h * y, w * 0.75, h * 0.045, P.glow, P.dark ? 0.16 : 0.60);
+        });
+      });
+      mottle(c, w, h, P, rnd, 0.035);
+      clearCentre(c, w, h, P, 0.30);
+    }
+  },
+
+  glow: {
+    label: 'אורות', hint: 'עיגולי אור רכים', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      mixed(c, P, function () {
+        wash(c, w * 0.05, h * 0.05, w * 0.55, h * 0.40, P.c2, 0.50, rnd, { puffs: 8, layers: 2 });
+        wash(c, w * 0.95, h * 0.95, w * 0.55, h * 0.40, P.c1, 0.50, rnd, { puffs: 8, layers: 2 });
+      });
+      /* lights out of focus: the big near ones are the blurriest, the way a
+         lens renders them, so the field has depth instead of polka dots */
+      const cols = [P.c2, P.c1, P.c4, P.c2];
+      for (let i = 0; i < 34; i++) {
+        /* hug the rim, keep the middle for the portrait and the times; the
+           angles are spread evenly and jittered, or chance piles them up on
+           one side */
+        const ang = (i + rnd() * 0.9) / 34 * Math.PI * 2;
+        const rad = 0.40 + rnd() * 0.26;
+        const x = w * (0.5 + Math.cos(ang) * rad), y = h * (0.5 + Math.sin(ang) * rad);
+        const r = w * (0.025 + rnd() * rnd() * 0.10);
+        const col = cols[i % cols.length];
+        const a = 0.30 + rnd() * 0.32;
+        softly(c, 2 + r / w * 160, function () {
+          mixed(c, P, function () { bokeh(c, x, y, r, col, a); });
+          /* and a breath of light on top, so a light reads as light */
+          bokeh(c, x - r * 0.15, y - r * 0.15, r * 0.7, P.glow, P.dark ? 0.12 : 0.30);
+        });
+      }
+      mottle(c, w, h, P, rnd, 0.04);
+      clearCentre(c, w, h, P, 0.36);
+    }
+  },
+
+  silk: {
+    label: 'משי', hint: 'קפלי בד רכים', frame: 'none',
+    draw: function (c, w, h, P, rnd) {
+      /* Drapery across two opposite corners, the way a cloth is hung over the
+         corner of a frame: several broad folds running in parallel, each one
+         blurred until only its shading is left, with a wide soft sheen along
+         its crest. Folds running round the whole board closed into an eye. */
+      function drape(x0, y0, x1, y1, bend, cols) {
+        cols.forEach(function (col, k) {
+          const off = (k - (cols.length - 1) / 2) * w * 0.075;
+          const nx = -(y1 - y0), ny = x1 - x0, nl = Math.hypot(nx, ny);
+          const ox = nx / nl * off, oy = ny / nl * off;
+          const mx = (x0 + x1) / 2 + nx / nl * bend + ox, my = (y0 + y1) / 2 + ny / nl * bend + oy;
+          softly(c, 30, function () {
+            mixed(c, P, function () {
+              c.beginPath();
+              c.moveTo(x0 + ox, y0 + oy);
+              c.quadraticCurveTo(mx, my, x1 + ox, y1 + oy);
+              c.strokeStyle = hexA(col, 0.40 + rnd() * 0.16);
+              c.lineWidth = w * (0.05 + rnd() * 0.03);
+              c.lineCap = 'round';
+              c.stroke();
+            });
+          });
+          softly(c, 16, function () {
+            c.beginPath();
+            c.moveTo(x0 + ox * 1.25, y0 + oy * 1.25);
+            c.quadraticCurveTo(mx + ox * 0.25, my + oy * 0.25, x1 + ox * 1.25, y1 + oy * 1.25);
+            c.strokeStyle = hexA(P.glow, P.dark ? 0.10 : 0.42);
+            c.lineWidth = w * 0.022;
+            c.lineCap = 'round';
+            c.stroke();
+          });
+        });
+      }
+      drape(w * 0.30, -h * 0.08, w * 1.08, h * 0.52, -w * 0.10, [P.c1, P.c2, P.c4, P.c2]);
+      drape(-w * 0.08, h * 0.50, w * 0.70, h * 1.08, w * 0.10, [P.c2, P.c4, P.c1, P.c2]);
+      mixed(c, P, function () {
+        wash(c, w * 1.0, 0, w * 0.40, h * 0.30, P.c1, 0.40, rnd, { puffs: 8, layers: 2 });
+        wash(c, 0, h, w * 0.40, h * 0.30, P.c1, 0.40, rnd, { puffs: 8, layers: 2 });
+      });
+      mottle(c, w, h, P, rnd, 0.035);
+      clearCentre(c, w, h, P, 0.30);
+    }
+  },
+
+  dawn: {
+    label: 'שחר', hint: 'שמיים ואופק רך', frame: 'thin',
+    draw: function (c, w, h, P, rnd) {
+      mixed(c, P, function () {
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, hexA(P.c1, 0.66));
+        g.addColorStop(0.36, hexA(P.c2, 0.20));
+        g.addColorStop(0.66, hexA(P.c4, 0.18));
+        g.addColorStop(0.86, hexA(P.c3, 0.46));
+        g.addColorStop(1, hexA(P.c1, 0.58));
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+      });
+      /* the horizon is a glow, not a line */
+      softly(c, 40, function () {
+        disc(c, w * 0.5, h * 0.88, w * 0.62, h * 0.10, P.glow, P.dark ? 0.40 : 0.85);
+      });
+      /* thin wisps high up, stretched the way high cloud is */
+      softly(c, 14, function () {
+        mixed(c, P, function () {
+          for (let i = 0; i < 6; i++) {
+            wash(c, w * rnd(), h * (0.04 + rnd() * 0.18), w * (0.22 + rnd() * 0.22), h * 0.022,
+              i % 2 ? P.c4 : P.deep, 0.30, rnd, { puffs: 6, layers: 1 });
+          }
+        });
+      });
+      mottle(c, w, h, P, rnd, 0.035);
+      clearCentre(c, w, h, P, 0.34);
     }
   },
 
@@ -663,7 +930,72 @@ const PATTERN_KEYS = Object.keys(PATTERNS);
 const PALETTE_KEYS = Object.keys(PALETTES);
 
 function patternOf(key) { return PATTERNS[key] || PATTERNS.mist; }
-function paletteOf(key) { return PALETTES[key] || PALETTES.navy; }
+/* A palette key may name two palettes, "navy+sage": the first keeps the
+ * paper, the ink and the plaque - everything legibility depends on - and the
+ * second lends its masses, so the art carries both hues while the text stays
+ * exactly as readable as the first palette alone. A light and a dark palette
+ * cannot be mixed (their paper and ink are swapped), so that pair falls back
+ * to the first. */
+/* ---------- colour treatment ----------
+ * Families said every design looked faded and unpleasant, and they were
+ * right on both counts. Faded: the palette masses are pastels that the
+ * multiply layering and the cleared centre wash out further. Unpleasant:
+ * c4 was chosen from the opposite side of the wheel, and blue multiplied by
+ * orange is grey-brown — every overlap was landing on mud. So the masses are
+ * made more saturated, and c4 becomes a neighbour of c1 (32° round the
+ * wheel), whose overlaps with c1/c2 stay clean and luminous. This is done
+ * here, once, so all fifteen patterns and every mix get it. */
+function hexToHsl(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(1, s)); l = Math.max(0, Math.min(1, l));
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  return '#' + [f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function richer(hex, sMul, dl) {
+  const c = hexToHsl(hex);
+  return hslToHex(c[0], Math.min(0.78, c[1] * sMul), c[2] + (dl || 0));
+}
+const vividCache = {};
+function vividOf(key) {
+  if (vividCache[key]) return vividCache[key];
+  const P = PALETTES[key] || PALETTES.navy;
+  const h1 = hexToHsl(P.c1), h2 = hexToHsl(P.c2);
+  return (vividCache[key] = Object.assign({}, P, {
+    c1: richer(P.c1, 1.28),
+    c2: richer(P.c2, 1.50, -0.02),
+    c3: richer(P.c3, 1.15),
+    c4: hslToHex(h1[0] - 32, Math.min(0.62, Math.max(0.34, h1[1]) * 1.25), (h1[2] + h2[2]) / 2 - 0.02),
+    deep: richer(P.deep, 1.1, 0.06)
+  }));
+}
+
+const mixCache = {};
+function paletteOf(key) {
+  key = key || '';
+  const plus = key.indexOf('+');
+  if (plus < 0) return vividOf(PALETTES[key] ? key : 'navy');
+  if (mixCache[key]) return mixCache[key];
+  const A = vividOf(PALETTES[key.slice(0, plus)] ? key.slice(0, plus) : 'navy');
+  const B = PALETTES[key.slice(plus + 1)] ? vividOf(key.slice(plus + 1)) : null;
+  if (!B || B === A || !!B.dark !== !!A.dark) return A;
+  return (mixCache[key] = Object.assign({}, A, {
+    label: A.label + ' + ' + B.label,
+    c2: B.c1, c4: B.c2,
+    sw: [A.sw[0], B.sw[0]]
+  }));
+}
+function canMix(a, b) {
+  return !!(PALETTES[a] && PALETTES[b] && a !== b && !!PALETTES[a].dark === !!PALETTES[b].dark);
+}
 
 /* ---------- painting ---------- */
 
@@ -707,7 +1039,7 @@ function vignette(c, w, h, P) {
   const g = c.createRadialGradient(w / 2, h / 2, w * 0.52, w / 2, h / 2, w * 0.86);
   const col = P.deep || P.ink;
   g.addColorStop(0, hexA(col, 0));
-  g.addColorStop(1, hexA(col, P.dark ? 0.38 : 0.15));
+  g.addColorStop(1, hexA(col, P.dark ? 0.38 : 0.09));
   c.fillStyle = g;
   c.fillRect(0, 0, w, h);
 }
@@ -780,7 +1112,11 @@ function boardBackground() {
 }
 
 function designKey() { return (settings && PATTERNS[settings.template]) ? settings.template : 'mist'; }
-function paletteKeyOf() { return (settings && PALETTES[settings.palette]) ? settings.palette : 'navy'; }
+function paletteKeyOf(src) {
+  src = src || settings;
+  const a = (src && PALETTES[src.palette]) ? src.palette : 'navy';
+  return (src && canMix(a, src.palette2)) ? a + '+' + src.palette2 : a;
+}
 
 /* ---------- font pairs ----------
  * Each pair names a title face and a body face WITH the weight the file
@@ -853,7 +1189,7 @@ const VERSES = [
 
 /* Base optical sizes, calibrated for the classic pair; every other pair
  * multiplies these by its own scale. */
-const S_TITLE = 104, S_SUB = 48, S_HEAD = 52, S_NAME = 38, S_TIME = 42;
+const S_TITLE = 104, S_SUB = 48, S_HEAD = 52, S_NAME = 42, S_TIME = 47;
 
 function fontPair() {
   return FONT_PAIRS[(settings && settings.fontPair)] || FONT_PAIRS.classic;
@@ -932,6 +1268,8 @@ function migrateSettings(s) {
   if (!s.renames || typeof s.renames !== 'object') s.renames = {};
   if (!s.minutes || typeof s.minutes !== 'object') s.minutes = {};
   if (!s.photoZoom) s.photoZoom = 100;
+  if (s.photoOffsetX == null) s.photoOffsetX = 50;
+  if (typeof s.palette2 !== 'string' || !canMix(s.palette, s.palette2)) s.palette2 = '';
   s.v = 3;
   return s;
 }
@@ -1135,7 +1473,7 @@ const LABELS = {
 
 /* ---------- drawing ---------- */
 
-function tpl() { return paletteOf(settings && settings.palette); }
+function tpl() { return paletteOf(paletteKeyOf()); }
 
 function diamond(x, y, r, color) {
   ctx.beginPath();
@@ -1213,8 +1551,24 @@ function drawTitle(title, subtitle) {
   ctx.restore();
 }
 
+/* Where the two columns sit, as a function of how many rows they carry.
+ * Up to six cities nothing moves. Past that the headers and the first row
+ * climb together into the empty band under the subtitle — up to 38px, fully
+ * at ten — so a long list starts higher and gets that height as extra
+ * pitch, instead of everything being squeezed into the band below a header
+ * that never moved. */
+function boardLayout(n) {
+  const lift = Math.max(0, Math.min(1, (n - 6) / 4)) * 38;
+  return {
+    headY: 408 - lift,
+    top: 492 - lift * 1.45,
+    bottom: n > COMFY_CITIES ? 1052 : 1042
+  };
+}
+
 // Column headers are always drawn by code (the backgrounds carry no text).
-function drawHeaders(rightLabel, leftLabel) {
+function drawHeaders(rightLabel, leftLabel, headY) {
+  headY = headY || 408;
   const T = tpl();
   ctx.save();
   ctx.direction = 'rtl';
@@ -1223,7 +1577,7 @@ function drawHeaders(rightLabel, leftLabel) {
   // adaptive backdrop first — invisible on clean paper, covers busy art
   const SLICES = 14;
   [[1020], [240]].forEach(([cx]) => {
-    const box = { x: cx - 190, y: 352, w: 380, h: 84 };
+    const box = { x: cx - 190, y: headY - 56, w: 380, h: 84 };
     const lums = sliceLum(box.x, box.y, box.w, box.h, SLICES);
     box.alphas = lums.map((_, k) =>
       lumToAlpha(Math.min(lums[k], lums[Math.max(0, k - 1)], lums[Math.min(SLICES - 1, k + 1)])));
@@ -1236,17 +1590,77 @@ function drawHeaders(rightLabel, leftLabel) {
     ctx.shadowColor = 'rgba(0,0,0,0.12)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 2;
-    ctx.fillText(label, cx, 408);
+    ctx.fillText(label, cx, headY);
     ctx.shadowColor = 'transparent';
     const w = ctx.measureText(label).width;
     ctx.strokeStyle = T.gold;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(cx - w / 2, 428);
-    ctx.lineTo(cx + w / 2, 428);
+    ctx.moveTo(cx - w / 2, headY + 20);
+    ctx.lineTo(cx + w / 2, headY + 20);
     ctx.stroke();
-    diamond(cx, 428, 5, T.gold);
+    diamond(cx, headY + 20, 5, T.gold);
   });
+  /* a setting sun over the entry, stars over the exit — the times are
+     sunset and nightfall, and the two marks say so before a word is read */
+  sunsetMark(1020, headY - 74, T.gold);
+  starsMark(240, headY - 78, T.gold);
+  ctx.restore();
+}
+
+function sunsetMark(cx, by, color) {
+  ctx.save();
+  ctx.strokeStyle = hexA(color, 0.85);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(cx, by, 24, Math.PI, 0);
+  ctx.stroke();
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI + i / 8 * Math.PI;
+    const r0 = 32, r1 = i % 2 ? 42 : 50;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r0, by + Math.sin(a) * r0);
+    ctx.lineTo(cx + Math.cos(a) * r1, by + Math.sin(a) * r1);
+    ctx.stroke();
+  }
+  /* the horizon, fading at both ends */
+  const g = ctx.createLinearGradient(cx - 120, 0, cx + 120, 0);
+  g.addColorStop(0, hexA(color, 0));
+  g.addColorStop(0.5, hexA(color, 0.85));
+  g.addColorStop(1, hexA(color, 0));
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 120, by + 1);
+  ctx.lineTo(cx + 120, by + 1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function starPath(x, y, R) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? R * 0.45 : R;
+    ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  ctx.closePath();
+}
+
+function starsMark(cx, cy, color) {
+  ctx.save();
+  ctx.strokeStyle = hexA(color, 0.85);
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  [[-34, -14, 19], [22, -2, 22], [-20, 26, 15]].forEach(function (s) {
+    starPath(cx + s[0], cy + s[1], s[2]);
+    ctx.stroke();
+  });
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx + 18, cy + 30); ctx.lineTo(cx + 18, cy + 42);
+  ctx.moveTo(cx + 12, cy + 36); ctx.lineTo(cx + 24, cy + 36);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -1255,10 +1669,18 @@ function drawHeaders(rightLabel, leftLabel) {
  * melts into the paper instead of sitting in a hard-edged window, then
  * warmed with a whisper of the paper tone so its colors sit with the art.
  * Shared by the board (full size) and the wizard's live preview. */
-function paintPhoto(octx, cw, ch, img, frame, offsetPct, zoomPct, creamRGB) {
+function paintPhoto(octx, cw, ch, img, frame, offsetPct, zoomPct, creamRGB, offsetXPct) {
   const scale = Math.max(frame.w / img.width, frame.h / img.height) * (zoomPct / 100);
   const dw = img.width * scale, dh = img.height * scale;
-  const sx = frame.x + (frame.w - dw) / 2;
+  /* Horizontal travel is the photo's overhang plus a fifth of the frame, so
+   * even a portrait that exactly fills the frame can be nudged: a face that
+   * sits off-centre in the original is moved under the middle of the board,
+   * and the uncovered strip is lost in the feathered edge anyway. 50 is
+   * centred; the slider runs right-to-left like the page, so a higher value
+   * moves the picture to the left. */
+  const slackX = Math.max(0, dw - frame.w) / 2 + frame.w * 0.2;
+  const ox = offsetXPct == null ? 50 : offsetXPct;
+  const sx = frame.x + (frame.w - dw) / 2 - (ox - 50) / 50 * slackX;
   const sy = frame.y - Math.max(0, dh - frame.h) * (offsetPct / 100);
   octx.save();
   octx.beginPath();
@@ -1304,7 +1726,8 @@ function drawPhoto() {
   paintPhoto(octx, W, H, photoImage, PHOTO_FRAME,
     settings.photoOffset != null ? settings.photoOffset : 25,
     settings.photoZoom || 100,
-    tpl().cream);
+    tpl().cream,
+    settings.photoOffsetX);
   ctx.drawImage(off, 0, 0);
 }
 
@@ -1481,13 +1904,18 @@ function drawRows(rows) {
   // same ratio, so a crowded board reads as a denser version of the design
   // instead of a pile of overlapping lines.
   const n = rows.length;
-  const tight = n > COMFY_CITIES;
-  const top = tight ? 476 : 492, bottom = tight ? 1050 : 1042;
+  const L = boardLayout(n);
+  const top = L.top, bottom = L.bottom;
   const rowH = n > 1 ? Math.min(78, (bottom - top) / (n - 1)) : 0;
   const startY = n > 1
     ? top + ((bottom - top) - rowH * (n - 1)) / 2
     : (top + bottom) / 2;
   const dens = n > 1 ? Math.min(1, rowH / 78) : 1;
+  /* Type shrinks more gently than the pitch does. Shrinking it by the same
+   * ratio left fifteen rows of 22px type floating in 41px of space; text of
+   * x-height ~0.5em still clears its neighbours at this curve, and the
+   * lozenge follows the type rather than the pitch so it stays a backdrop. */
+  const tdens = Math.min(1, Math.pow(dens, 0.68));
 
   const cols = [
     { nameX: 1168, timeX: 858, key: 'entry' },
@@ -1501,7 +1929,8 @@ function drawRows(rows) {
     for (const col of cols) {
       const x0 = Math.min(col.timeX, col.nameX) - 48;
       const x1 = Math.max(col.timeX, col.nameX) + 48;
-      const box = { x: x0, y: y - 42 * dens, w: x1 - x0, h: 66 * dens };
+      const bh = Math.min(66 * tdens, (rowH || 78) * 0.98);
+      const box = { x: x0, y: y - bh * 0.64, w: x1 - x0, h: bh };
       const lums = sliceLum(box.x, box.y, box.w, box.h, SLICES);
       box.alphas = lums.map((_, k) =>
         lumToAlpha(Math.min(lums[k], lums[Math.max(0, k - 1)], lums[Math.min(SLICES - 1, k + 1)])));
@@ -1515,20 +1944,25 @@ function drawRows(rows) {
     for (const col of cols) {
       ctx.save();
       ctx.shadowColor = 'rgba(' + T.cream + ',0.95)';
-      ctx.shadowBlur = Math.max(5, Math.round(8 * dens));
+      ctx.shadowBlur = Math.max(5, Math.round(8 * tdens));
       ctx.fillStyle = T.ink;
+
+      /* the time is drawn first so the name can be given exactly the room
+         that is left — with bigger type a fixed 190px let a long name run
+         into the time */
+      ctx.direction = 'ltr';
+      ctx.textAlign = 'left';
+      ctx.font = wBody() + ' ' + Math.round(sB(S_TIME) * tdens) + 'px ' + fBody();
+      ctx.fillText(row[col.key], col.timeX, y);
+      const timeW = ctx.measureText(row[col.key]).width;
 
       ctx.direction = 'rtl';
       ctx.textAlign = 'right';
+      const room = Math.max(120, col.nameX - col.timeX - timeW - 26);
       const nSize = fitFont(row.name, wBody(), fBody(),
-        Math.round(sB(S_NAME) * dens), 190);
+        Math.round(sB(S_NAME) * tdens), Math.min(220, room));
       ctx.font = wBody() + ' ' + nSize + 'px ' + fBody();
       ctx.fillText(row.name, col.nameX, y);
-
-      ctx.direction = 'ltr';
-      ctx.textAlign = 'left';
-      ctx.font = wBody() + ' ' + Math.round(sB(S_TIME) * dens) + 'px ' + fBody();
-      ctx.fillText(row[col.key], col.timeX, y);
       ctx.restore();
 
       ctx.save();
@@ -1536,8 +1970,8 @@ function drawRows(rows) {
       ctx.lineWidth = Math.max(1.2, 2 * dens);
       ctx.setLineDash([2, Math.max(5, 7 * dens)]);
       ctx.beginPath();
-      ctx.moveTo(col.timeX, y + 18 * dens);
-      ctx.lineTo(col.nameX, y + 18 * dens);
+      ctx.moveTo(col.timeX, y + 18 * Math.min(tdens, dens * 1.1));
+      ctx.lineTo(col.nameX, y + 18 * Math.min(tdens, dens * 1.1));
       ctx.stroke();
       ctx.restore();
     }
@@ -1569,7 +2003,7 @@ function drawBoard(plan, rows) {
   ctx.drawImage(boardBackground(), 0, 0, W, H);
   drawPhoto();
   drawTitle(labels.title, plan.name);
-  drawHeaders(labels.right, labels.left);
+  drawHeaders(labels.right, labels.left, boardLayout(rows.length).headY);
   drawPlaque();
   drawRows(rows);
   drawContact();
@@ -1744,7 +2178,7 @@ function drawSampleBoard() {
   settings.name = 'שם יקירכם ז״ל';
   settings.dateLine = 'תאריך הפטירה';
   settings.verse = 'נר ה׳ נשמת אדם';
-  settings.template = 'mist';
+  settings.template = 'rising';
   settings.palette = 'navy';
   settings.photoOffset = 18;
   settings.photoZoom = 104;
@@ -1783,6 +2217,7 @@ function defaultDraft() {
     photo: '',
     photoOffset: 25,
     photoZoom: 100,
+    photoOffsetX: 50,
     dedication: DEDICATIONS[0],
     name: '',
     dateLine: '',
@@ -1791,8 +2226,9 @@ function defaultDraft() {
     customCities: [],
     renames: {},
     minutes: {},
-    template: 'mist',
+    template: 'rising',
     palette: 'navy',
+    palette2: '',
     fontPair: 'classic'
   };
 }
@@ -1838,9 +2274,10 @@ function renameCity(draft, key, name) {
   else draft.renames[key] = clean;
 }
 
-function openWizard(prefill) {
+function openWizard(prefill, startStep) {
   if (window.ZN_TRACK) ZN_TRACK.wizardStart();
   wizardState.step = 0;
+  wizardState.editing = !!prefill;
   wizardState.draft = prefill ? JSON.parse(JSON.stringify(prefill)) : defaultDraft();
   hideIntro();
   $('screenBoard').style.display = 'none';
@@ -1850,7 +2287,34 @@ function openWizard(prefill) {
   $('wizExport').style.display = prefill ? 'inline-block' : 'none';
   $('wizTitle').textContent = prefill ? 'עריכת ההגדרות' : 'יצירת לוח שבת אישי';
   fillWizardFields();
-  showStep(0);
+  renderWizTabs();
+  showStep(startStep || 0);
+}
+
+/* Editing an existing board is not a second walk through the wizard. Every
+ * step is one tap away on the tab row, and "save" is there on every step —
+ * someone who wants a different font or tone changes that one thing and is
+ * done. A new board still goes step by step, where the order teaches. */
+function renderWizTabs() {
+  const box = $('wizTabs');
+  box.innerHTML = '';
+  box.style.display = wizardState.editing ? 'flex' : 'none';
+  if (!wizardState.editing) return;
+  STEP_TITLES.forEach(function (t, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'wtab';
+    b.textContent = t;
+    b.addEventListener('click', function () { goStep(i); });
+    box.appendChild(b);
+  });
+}
+
+function goStep(i) {
+  if (i === wizardState.step) return;
+  const err = collectStep(wizardState.step);
+  if (err) { $('wizErr').textContent = err; return; }
+  showStep(i);
 }
 
 function closeWizardToBoard() {
@@ -1898,6 +2362,7 @@ function fillWizardFields() {
   // photo preview
   $('photoOffset').value = d.photoOffset != null ? d.photoOffset : 25;
   $('photoZoom').value = d.photoZoom || 100;
+  $('photoOffsetX').value = d.photoOffsetX != null ? d.photoOffsetX : 50;
   refreshPhotoPreview();
 
   // cities
@@ -1909,6 +2374,7 @@ function fillWizardFields() {
   // the currently chosen palette, so what is picked is exactly what prints
   renderDesignGrid();
   renderPaletteGrid();
+  renderPalette2Grid();
 
   // font pairs
   const fg = $('fontGrid');
@@ -1985,13 +2451,22 @@ function renderDesignGrid() {
     label.appendChild(cap);
     grid.appendChild(label);
   });
-  repaintDesignGrid(d.palette);
+  repaintDesignGrid(paletteKeyOf(d));
 }
 
+/* One tile per frame. The soft designs use real blur, and sixteen of them in
+ * one go froze the page for over half a second on a desktop — far longer on
+ * a phone — every time a tone was tapped. Tile by tile, the gallery fills in
+ * visibly and the tap answers at once; a newer tap cancels the older run. */
+let tileRun = 0;
 function repaintDesignGrid(paletteKey) {
-  $('tplGrid').querySelectorAll('canvas.tileart').forEach(function (cv) {
-    paintDesign(cv.getContext('2d'), TILE_PX, cv.dataset.pattern, paletteKey);
-  });
+  const run = ++tileRun;
+  const tiles = Array.from($('tplGrid').querySelectorAll('canvas.tileart'));
+  (function next(i) {
+    if (run !== tileRun || i >= tiles.length) return;
+    paintDesign(tiles[i].getContext('2d'), TILE_PX, tiles[i].dataset.pattern, paletteKey);
+    requestAnimationFrame(function () { next(i + 1); });
+  })(0);
 }
 
 function renderPaletteGrid() {
@@ -2012,7 +2487,9 @@ function renderPaletteGrid() {
       grid.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
       label.classList.add('checked');
       d.palette = key;
-      repaintDesignGrid(key);
+      if (!canMix(key, d.palette2)) d.palette2 = '';
+      renderPalette2Grid();
+      repaintDesignGrid(paletteKeyOf(d));
     });
     const dot = document.createElement('span');
     dot.className = 'dot';
@@ -2020,6 +2497,53 @@ function renderPaletteGrid() {
     const nm = document.createElement('span');
     nm.className = 'swname';
     nm.textContent = P.label;
+    label.appendChild(rb);
+    label.appendChild(dot);
+    label.appendChild(nm);
+    grid.appendChild(label);
+  });
+}
+
+/* The optional second tone. Only palettes of the same lightness are offered —
+ * a dark one's paper is a light one's ink — and the first tone itself is
+ * greyed out, since mixing a palette with itself is just the palette. */
+function renderPalette2Grid() {
+  const d = wizardState.draft;
+  const grid = $('toneGrid2');
+  if (!grid) return;
+  grid.innerHTML = '';
+  [''].concat(PALETTE_KEYS).forEach(function (key) {
+    const P = PALETTES[key];
+    const label = document.createElement('label');
+    label.className = 'swatch';
+    const rb = document.createElement('input');
+    rb.type = 'radio';
+    rb.name = 'palettePick2';
+    rb.value = key;
+    const ok = !key || canMix(d.palette, key);
+    rb.disabled = !ok;
+    if (!ok) label.classList.add('off');
+    rb.checked = (d.palette2 || '') === key;
+    if (rb.checked) label.classList.add('checked');
+    rb.addEventListener('change', function () {
+      grid.querySelectorAll('label').forEach(function (l) { l.classList.remove('checked'); });
+      label.classList.add('checked');
+      d.palette2 = key;
+      repaintDesignGrid(paletteKeyOf(d));
+    });
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    if (P) {
+      const A = PALETTES[d.palette] || PALETTES.navy;
+      dot.style.background = 'linear-gradient(135deg,' + A.sw[0] + ' 0 50%,' + P.sw[0] + ' 50% 100%)';
+    } else {
+      dot.classList.add('none');
+      dot.textContent = '—';
+    }
+    const nm = document.createElement('span');
+    nm.className = 'swname';
+    nm.textContent = P ? P.label : 'גוון אחד בלבד';
+    label.title = ok ? '' : (key === d.palette ? 'זה הגוון הראשון' : 'גוון כהה ובהיר לא משתלבים');
     label.appendChild(rb);
     label.appendChild(dot);
     label.appendChild(nm);
@@ -2046,7 +2570,8 @@ function refreshPhotoPreview() {
     pctx.fillRect(0, 0, c.width, c.height);
     paintPhoto(pctx, c.width, c.height, img,
       { x: 10, y: 10, w: c.width - 20, h: c.height - 20 },
-      Number($('photoOffset').value), Number($('photoZoom').value), '243,236,220');
+      Number($('photoOffset').value), Number($('photoZoom').value), '243,236,220',
+      Number($('photoOffsetX').value));
   };
   img.src = d.photo;
 }
@@ -2065,8 +2590,16 @@ function renderCityGrid() {
     cb.value = c.key;
     cb.checked = d.cities.includes(c.key);
     if (cb.checked) label.classList.add('checked');
+    /* The draft is updated the moment a box is ticked. It used to be read
+     * off the checkboxes only when leaving the step, so anything that redrew
+     * the list first — adding a searched town, renaming one — rebuilt it from
+     * the stale draft and silently undid every tick made since: picking one
+     * thing changed the others. */
     cb.addEventListener('change', () => {
       label.classList.toggle('checked', cb.checked);
+      const at = d.cities.indexOf(c.key);
+      if (cb.checked && at < 0) d.cities.push(c.key);
+      if (!cb.checked && at > -1) d.cities.splice(at, 1);
       updateCityCount();
     });
     top.appendChild(cb);
@@ -2503,6 +3036,10 @@ function showStep(i) {
   $('wizStepNum').textContent = 'שלב ' + (i + 1) + ' מתוך ' + WSTEPS;
   $('wizStepName').textContent = STEP_TITLES[i] || '';
   $('wizBar').style.width = ((i + 1) / WSTEPS * 100).toFixed(1) + '%';
+  $('wizTabs').querySelectorAll('.wtab').forEach(function (b, k) {
+    b.classList.toggle('on', k === i);
+  });
+  $('wizSave').style.display = wizardState.editing && i < WSTEPS - 1 ? 'inline-block' : 'none';
   $('wizard').scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
@@ -2511,6 +3048,7 @@ function collectStep(i) {
   if (i === 0) {
     d.photoOffset = Number($('photoOffset').value);
     d.photoZoom = Number($('photoZoom').value);
+    d.photoOffsetX = Number($('photoOffsetX').value);
     // photo itself is set on file pick
   } else if (i === 1) {
     d.dedication = $('fDedication').value;
@@ -2533,6 +3071,8 @@ function collectStep(i) {
     d.template = rb.value;
     const pk = document.querySelector('input[name="palettePick"]:checked');
     d.palette = pk ? pk.value : 'navy';
+    const pk2 = document.querySelector('input[name="palettePick2"]:checked');
+    d.palette2 = pk2 && canMix(d.palette, pk2.value) ? pk2.value : '';
   } else if (i === 5) {
     const rb = document.querySelector('input[name="fontPick"]:checked');
     if (!rb) return 'בחרו סגנון כתב';
@@ -2548,7 +3088,16 @@ function wizardNext() {
     showStep(wizardState.step + 1);
     return;
   }
-  // finish
+  finishWizard();
+}
+
+function wizardSave() {
+  const err = collectStep(wizardState.step);
+  if (err) { $('wizErr').textContent = err; return; }
+  finishWizard();
+}
+
+function finishWizard() {
   settings = wizardState.draft;
   try {
     saveSettings(settings);
@@ -2662,6 +3211,10 @@ $('nudgeSave').addEventListener('click', () => { exportSettings(); dismissNudge(
 $('nudgeLater').addEventListener('click', dismissNudge);
 
 $('wizNext').addEventListener('click', wizardNext);
+$('wizSave').addEventListener('click', wizardSave);
+document.querySelectorAll('[data-quick]').forEach(function (b) {
+  b.addEventListener('click', function () { if (settings) openWizard(settings, Number(b.dataset.quick)); });
+});
 $('wizPrev').addEventListener('click', () => showStep(Math.max(0, wizardState.step - 1)));
 $('wizCancel').addEventListener('click', () => {
   if (settings) { closeWizardToBoard(); }
@@ -2671,6 +3224,10 @@ $('photoDrop').addEventListener('click', () => $('photoFile').click());
 $('photoFile').addEventListener('change', e => handlePhotoFile(e.target.files[0]));
 $('photoOffset').addEventListener('input', () => {
   wizardState.draft.photoOffset = Number($('photoOffset').value);
+  refreshPhotoPreview();
+});
+$('photoOffsetX').addEventListener('input', () => {
+  wizardState.draft.photoOffsetX = Number($('photoOffsetX').value);
   refreshPhotoPreview();
 });
 $('photoZoom').addEventListener('input', () => {
